@@ -138,15 +138,21 @@ class KeithleyControlWidget(QWidget):
         self.current_limit_input.set_base_value(0.1)  # 預設100mA
         output_layout.addWidget(self.current_limit_input, 3, 1)
         
-        self.output_btn = QPushButton("開啟輸出")
-        self.output_btn.clicked.connect(self.toggle_output)
-        self.output_btn.setEnabled(False)
-        output_layout.addWidget(self.output_btn, 4, 0, 1, 2)
+        # 建立按鈕的水平佈局
+        button_layout = QHBoxLayout()
         
         self.apply_btn = QPushButton("應用設定")
         self.apply_btn.clicked.connect(self.apply_settings)
         self.apply_btn.setEnabled(False)
-        output_layout.addWidget(self.apply_btn, 5, 0, 1, 2)
+        button_layout.addWidget(self.apply_btn)
+        
+        self.output_btn = QPushButton("開啟輸出")
+        self.output_btn.clicked.connect(self.toggle_output)
+        self.output_btn.setEnabled(False)
+        button_layout.addWidget(self.output_btn)
+        
+        # 將水平按鈕佈局加入到網格佈局
+        output_layout.addLayout(button_layout, 4, 0, 1, 2)
         
         layout.addWidget(output_group)
         
