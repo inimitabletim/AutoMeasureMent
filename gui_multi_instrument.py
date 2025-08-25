@@ -200,7 +200,13 @@ class MultiInstrumentGUI(QMainWindow):
     def setup_ui(self):
         """設置用戶介面"""
         self.setWindowTitle("多儀器控制系統 - Keithley 2461 & Rigol DP711")
-        self.setGeometry(100, 100, 1400, 900)
+        
+        # 設置視窗尺寸限制，避免幾何警告
+        self.setMinimumSize(1200, 700)  # 設置最小尺寸
+        self.resize(1400, 900)  # 設置預設尺寸，讓系統自動調整
+        
+        # 讓視窗居中顯示
+        QTimer.singleShot(100, self.center_on_screen)  # 延遲執行以確保視窗已創建
         
         # 創建中央 widget
         central_widget = QWidget()
@@ -334,6 +340,25 @@ class MultiInstrumentGUI(QMainWindow):
             event.accept()
         else:
             event.ignore()
+            
+    def center_on_screen(self):
+        """將視窗居中顯示在螢幕上"""
+        try:
+            # 獲取螢幕幾何資訊
+            screen = QApplication.primaryScreen()
+            screen_geometry = screen.availableGeometry()
+            
+            # 計算居中位置
+            window_geometry = self.frameGeometry()
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            
+            # 移動視窗到居中位置
+            self.move(window_geometry.topLeft())
+        except Exception as e:
+            self.logger.debug(f"視窗居中失敗: {e}")
+            # 使用備用位置
+            self.move(100, 100)
 
 
 def main():

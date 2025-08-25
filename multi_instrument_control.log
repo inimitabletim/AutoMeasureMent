@@ -154,3 +154,5 @@
 2025-08-25 16:04:18,957 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 16:04:18,958 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
 2025-08-25 16:04:18,987 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 16:16:07,215 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 16:16:07,215 - gui_multi_instrument - INFO - 系統主題: dark
