@@ -124,3 +124,12 @@
 2025-08-25 15:36:46,058 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 15:36:46,058 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
 2025-08-25 15:36:46,091 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:41:01,063 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 15:41:01,064 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-25 15:41:16,655 - Keithley2461 - ERROR - VISA連接失敗: could not connect: -1073807339
+2025-08-25 15:41:19,075 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:41:29,192 - Keithley2461 - ERROR - VISA連接失敗: could not connect: -1073807339
+2025-08-25 15:44:59,351 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:44:59,352 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-25 15:44:59,352 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-25 15:44:59,382 - Keithley2461 - INFO - 儀器已斷開連接
