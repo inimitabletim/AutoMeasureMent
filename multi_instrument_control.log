@@ -133,3 +133,24 @@
 2025-08-25 15:44:59,352 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 15:44:59,352 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
 2025-08-25 15:44:59,382 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:57:23,269 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 15:57:23,270 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-25 15:57:45,301 - Keithley2461 - ERROR - VISA連接失敗: could not connect: -1073807339
+2025-08-25 15:58:24,528 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:58:24,531 - Keithley2461 - INFO - VISA成功連接到 TCPIP::192.168.0.100::5025::SOCKET
+2025-08-25 15:58:24,732 - Keithley2461 - INFO - 已切換到SCPI命令模式
+2025-08-25 15:58:24,734 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 15:58:25,738 - Keithley2461 - INFO - 儀器已重置
+2025-08-25 15:58:25,740 - src.data_logger - INFO - 開始記錄會話: session_20250825_155825
+2025-08-25 15:58:33,358 - Keithley2461 - INFO - 輸出已關閉
+2025-08-25 15:58:33,359 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:58:33,359 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 15:58:53,365 - Keithley2461 - INFO - VISA成功連接到 TCPIP::192.168.0.100::5025::SOCKET
+2025-08-25 15:58:53,566 - Keithley2461 - INFO - 已切換到SCPI命令模式
+2025-08-25 15:58:53,568 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 15:58:54,569 - Keithley2461 - INFO - 儀器已重置
+2025-08-25 15:58:54,570 - src.data_logger - INFO - 開始記錄會話: session_20250825_155854
+2025-08-25 16:04:18,957 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 16:04:18,957 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-25 16:04:18,958 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-25 16:04:18,987 - Keithley2461 - INFO - 儀器已斷開連接

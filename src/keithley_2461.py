@@ -7,7 +7,6 @@ import socket
 import time
 import logging
 from typing import Optional, Tuple, List, Dict, Any
-import pyvisa
 from src.instrument_base import SourceMeterBase
 
 
@@ -30,20 +29,25 @@ class Keithley2461(SourceMeterBase):
         
         # 連接物件
         self.socket = None
-        self.visa_rm = None
-        self.instrument = None
         
         # 儀器狀態
         self.current_voltage = 0.0
         self.current_current = 0.0
         
-    def connect_via_socket(self) -> bool:
+    def connect(self, connection_params: Dict[str, Any] = None) -> bool:
         """
-        使用Socket連接儀器
+        連接到儀器 (使用Socket)
+        
+        Args:
+            connection_params: 連接參數，可包含 'ip_address'
         
         Returns:
             bool: 連接成功返回True
         """
+        # 從參數中獲取IP地址
+        if connection_params and 'ip_address' in connection_params:
+            self.ip_address = connection_params['ip_address']
+            
         if not self.ip_address:
             self.logger.error("未設定IP地址")
             return False
@@ -78,78 +82,6 @@ class Keithley2461(SourceMeterBase):
             return False
             
         return self.connected
-        
-    def connect_via_visa(self) -> bool:
-        """
-        使用PyVISA連接儀器
-        
-        Returns:
-            bool: 連接成功返回True
-        """
-        if not self.ip_address:
-            self.logger.error("未設定IP地址")
-            return False
-            
-        try:
-            self.visa_rm = pyvisa.ResourceManager()
-            # TCPIP連接字符串格式: TCPIP::host::port::SOCKET
-            visa_address = f"TCPIP::{self.ip_address}::{self.port}::SOCKET"
-            
-            self.instrument = self.visa_rm.open_resource(visa_address)
-            self.instrument.timeout = int(self.timeout * 1000)  # 轉換為毫秒
-            self.instrument.read_termination = '\n'
-            self.instrument.write_termination = '\n'
-            
-            self.connected = True
-            self.logger.info(f"VISA成功連接到 {visa_address}")
-            
-            # 切換到 SCPI 命令模式
-            try:
-                self.instrument.write(":SYST:LANG SCPI")
-                time.sleep(0.2)
-                self.logger.info("已切換到SCPI命令模式")
-            except Exception as e:
-                self.logger.debug(f"SCPI模式切換: {e}")
-                
-            # 驗證連接
-            response = self.query("*IDN?")
-            if "2461" in response:
-                self.logger.info(f"儀器識別: {response.strip()}")
-                return True
-            else:
-                self.logger.warning(f"意外的儀器回應: {response}")
-                
-        except Exception as e:
-            self.logger.error(f"VISA連接失敗: {e}")
-            self.connected = False
-            return False
-            
-        return self.connected
-        
-    def connect(self, connection_params: Dict[str, Any] = None, method: str = "visa") -> bool:
-        """
-        連接到儀器
-        
-        Args:
-            connection_params: 連接參數 (可選，為了符合基類接口)
-            method: 連接方法 ("visa" 或 "socket")
-            
-        Returns:
-            bool: 連接成功返回True
-        """
-        # 如果提供了connection_params，從中提取IP地址
-        if connection_params and 'ip_address' in connection_params:
-            self.ip_address = connection_params['ip_address']
-        if connection_params and 'method' in connection_params:
-            method = connection_params['method']
-            
-        if method.lower() == "visa":
-            return self.connect_via_visa()
-        elif method.lower() == "socket":
-            return self.connect_via_socket()
-        else:
-            self.logger.error(f"不支援的連接方法: {method}")
-            return False
             
     def disconnect(self) -> None:
         """斷開儀器連接"""
@@ -157,14 +89,6 @@ class Keithley2461(SourceMeterBase):
             if self.socket:
                 self.socket.close()
                 self.socket = None
-                
-            if self.instrument:
-                self.instrument.close()
-                self.instrument = None
-                
-            if self.visa_rm:
-                self.visa_rm.close()
-                self.visa_rm = None
                 
             self.connected = False
             self.logger.info("儀器已斷開連接")
@@ -183,14 +107,13 @@ class Keithley2461(SourceMeterBase):
             raise ConnectionError("儀器未連接")
             
         try:
-            if self.instrument:  # VISA方式
-                self.instrument.write(command)
-            elif self.socket:    # Socket方式
+            if self.socket:
                 command_bytes = (command + '\n').encode('utf-8')
                 self.socket.send(command_bytes)
+                self.logger.debug(f"發送命令: {command}")
+            else:
+                raise ConnectionError("Socket未連接")
                 
-            self.logger.debug(f"發送命令: {command}")
-            
         except Exception as e:
             self.logger.error(f"發送命令失敗: {e}")
             raise
@@ -209,16 +132,15 @@ class Keithley2461(SourceMeterBase):
             raise ConnectionError("儀器未連接")
             
         try:
-            if self.instrument:  # VISA方式
-                response = self.instrument.query(command).strip()
-            elif self.socket:    # Socket方式
+            if self.socket:
                 command_bytes = (command + '\n').encode('utf-8')
                 self.socket.send(command_bytes)
                 response = self.socket.recv(1024).decode('utf-8').strip()
+                self.logger.debug(f"查詢: {command} -> {response}")
+                return response
+            else:
+                raise ConnectionError("Socket未連接")
                 
-            self.logger.debug(f"查詢: {command} -> {response}")
-            return response
-            
         except Exception as e:
             self.logger.error(f"查詢命令失敗: {e}")
             raise
