@@ -36,7 +36,6 @@ def check_dependencies():
         print("\n請執行以下命令安裝:")
         print("pip install -r requirements.txt")
         
-        # 不使用 tkinter 避免與 PyQt6 衝突
         # 只顯示控制台訊息
             
         return False
