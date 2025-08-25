@@ -106,13 +106,8 @@ class KeithleyControlWidget(QWidget):
         conn_layout = QGridLayout(connection_group)
         
         conn_layout.addWidget(QLabel("IP地址:"), 0, 0)
-        self.ip_input = QLineEdit()
-        self.ip_input.setPlaceholderText("例如: 192.168.1.100")
+        self.ip_input = QLineEdit("192.168.1.100")
         conn_layout.addWidget(self.ip_input, 0, 1)
-        
-        ip_hint = QLabel("請確認儀器DHCP IP: MENU → System → Communication → LAN")
-        ip_hint.setStyleSheet("color: #CCCCCC; font-size: 12px; margin-top: 2px;")
-        conn_layout.addWidget(ip_hint, 1, 0, 1, 2)
         
         self.connect_btn = QPushButton("連接")
         self.connect_btn.clicked.connect(self.connect_device)

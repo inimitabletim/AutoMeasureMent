@@ -7,8 +7,8 @@
 import logging
 from typing import Dict, List, Optional, Tuple
 from PyQt6.QtCore import QObject, pyqtSignal
-from .port_manager import PortManager, DeviceInfo, get_port_manager
-from .rigol_dp711 import RigolDP711
+from src.port_manager import PortManager, DeviceInfo, get_port_manager
+from src.rigol_dp711 import RigolDP711
 
 
 class MultiDeviceManager(QObject):

@@ -59,3 +59,9 @@
 2025-08-25 11:29:46,167 - gui_multi_instrument - INFO - 系統主題: dark
 2025-08-25 11:31:43,396 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 11:31:43,396 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-25 13:52:02,674 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 13:52:02,674 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-25 13:55:07,456 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 13:55:07,456 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-25 13:55:29,874 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-25 13:55:29,874 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉

@@ -8,7 +8,7 @@ import logging
 import time
 from typing import Optional, Dict, Any, Tuple
 import pyvisa
-from .instrument_base import PowerSupplyBase
+from src.instrument_base import PowerSupplyBase
 
 
 class RigolDP711(PowerSupplyBase):

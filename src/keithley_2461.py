@@ -8,7 +8,7 @@ import time
 import logging
 from typing import Optional, Tuple, List, Dict, Any
 import pyvisa
-from .instrument_base import SourceMeterBase
+from src.instrument_base import SourceMeterBase
 
 
 class Keithley2461(SourceMeterBase):
