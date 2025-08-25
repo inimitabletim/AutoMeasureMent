@@ -35,6 +35,9 @@ class UnitInputWidget(QWidget):
         self.precision = precision
         self.current_base_value = 0.0
         
+        # 防止循環更新的標誌
+        self.updating = False
+        
         self.setup_ui()
         
     def setup_ui(self):
@@ -89,6 +92,9 @@ class UnitInputWidget(QWidget):
         
     def on_value_changed(self, text: str):
         """數值改變時的處理"""
+        if self.updating:  # 防止循環更新
+            return
+            
         try:
             if text.strip() == "" or text.strip() == "-":
                 return
@@ -121,6 +127,9 @@ class UnitInputWidget(QWidget):
     
     def on_prefix_changed(self, prefix_text: str):
         """前綴改變時的處理"""
+        if self.updating:  # 防止循環更新
+            return
+            
         # 保持相同的基本單位值，但更新顯示
         self.set_base_value(self.current_base_value)
     
@@ -155,19 +164,31 @@ class UnitInputWidget(QWidget):
     
     def set_base_value(self, base_value: float):
         """
-        設定基本單位值
+        設定基本單位值 - 順序無關，智能同步
         
         Args:
             base_value: 基本單位的數值
         """
+        self.updating = True  # 開始更新，防止循環
+        
         self.current_base_value = base_value
         current_prefix = self.get_current_prefix()
         
+        # 使用固定小數位數，避免浮點數精度問題
         if current_prefix in UnitConverter.PREFIXES:
             display_value = base_value / UnitConverter.PREFIXES[current_prefix]
-            self.value_edit.setText(f"{display_value:.{self.precision}f}")
+            # 格式化為固定精度，避免 9.999999e-06 這類問題
+            formatted_value = f"{display_value:.{self.precision}f}".rstrip('0').rstrip('.')
+            if '.' not in formatted_value:
+                formatted_value += '.0'
+            self.value_edit.setText(formatted_value)
         else:
-            self.value_edit.setText(f"{base_value:.{self.precision}f}")
+            formatted_value = f"{base_value:.{self.precision}f}".rstrip('0').rstrip('.')
+            if '.' not in formatted_value:
+                formatted_value += '.0'
+            self.value_edit.setText(formatted_value)
+            
+        self.updating = False  # 完成更新
     
     def get_base_value(self) -> float:
         """獲取基本單位值"""

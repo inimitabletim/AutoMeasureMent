@@ -378,9 +378,13 @@ class Keithley2461(SourceMeterBase):
         # 設定為電壓源模式
         self.set_source_function("VOLT")
         
-        # 設定電壓值和電流限制 - 使用標準簡化 SCPI 格式
-        self.send_command(f"SOUR:VOLT:LEV {voltage}")
-        self.send_command(f"SOUR:CURR:LIM {current_limit}")
+        # 設定電壓值和電流限制 - 修正浮點數精度問題
+        # 格式化為固定小數位數，避免科學記數法
+        voltage_str = f"{voltage:.6f}".rstrip('0').rstrip('.')
+        current_limit_str = f"{current_limit:.9f}".rstrip('0').rstrip('.')
+        
+        self.send_command(f"SOUR:VOLT:LEV {voltage_str}")
+        self.send_command(f"SOUR:CURR:LIM {current_limit_str}")
         
         self.current_voltage = voltage
         self.logger.info(f"設定電壓: {voltage}V, 電流限制: {current_limit}A")
@@ -397,9 +401,12 @@ class Keithley2461(SourceMeterBase):
         # 設定為電流源模式
         self.set_source_function("CURR")
         
-        # 設定電流值和電壓限制 - 使用標準簡化 SCPI 格式  
-        self.send_command(f"SOUR:CURR:LEV {current}")
-        self.send_command(f"SOUR:VOLT:LIM {voltage_limit}")
+        # 設定電流值和電壓限制 - 修正浮點數精度問題  
+        current_str = f"{current:.9f}".rstrip('0').rstrip('.')
+        voltage_limit_str = f"{voltage_limit:.6f}".rstrip('0').rstrip('.')
+        
+        self.send_command(f"SOUR:CURR:LEV {current_str}")
+        self.send_command(f"SOUR:VOLT:LIM {voltage_limit_str}")
         
         self.current_current = current
         self.logger.info(f"設定電流: {current}A, 電壓限制: {voltage_limit}V")
