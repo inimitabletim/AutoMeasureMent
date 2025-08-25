@@ -82,6 +82,10 @@ class KeithleyControlWidget(QWidget):
         # 日誌
         self.logger = logging.getLogger(__name__)
         
+        # 操作狀態追蹤
+        self.settings_applied = False  # 是否已應用設定
+        self.output_enabled = False    # 是否輸出開啟
+        
         self.setup_ui()
         
     def setup_ui(self):
@@ -96,6 +100,70 @@ class KeithleyControlWidget(QWidget):
         # 右側顯示面板
         right_panel = self.create_display_panel()
         main_layout.addWidget(right_panel, 2)
+        
+        # 初始化按鈕狀態（在所有UI組件創建完成後）
+        self.update_button_states()
+        
+    def update_button_states(self):
+        """更新按鈕狀態 - 智能操作流程控制"""
+        # 確保按鈕已創建
+        if not hasattr(self, 'apply_btn') or not hasattr(self, 'output_btn'):
+            return
+            
+        connected = bool(self.keithley and getattr(self.keithley, 'connected', False))
+        
+        # 連接按鈕
+        if hasattr(self, 'connect_btn'):
+            self.connect_btn.setText("斷開連接" if connected else "連接")
+        
+        # 應用設定按鈕：連接後即可使用
+        self.apply_btn.setEnabled(connected)
+        
+        # 開啟輸出按鈕：需要連接且已應用設定
+        self.output_btn.setEnabled(connected and self.settings_applied)
+        
+        # 測量按鈕：連接後即可使用
+        if hasattr(self, 'measure_btn'):
+            self.measure_btn.setEnabled(connected)
+        
+        # IP輸入框：未連接時可編輯
+        if hasattr(self, 'ip_input'):
+            self.ip_input.setEnabled(not connected)
+        
+        # 設定輸入框：連接後可編輯
+        if hasattr(self, 'voltage_input'):
+            self.voltage_input.setEnabled(connected)
+        if hasattr(self, 'current_input'):
+            self.current_input.setEnabled(connected)
+        if hasattr(self, 'current_limit_input'):
+            self.current_limit_input.setEnabled(connected)
+        if hasattr(self, 'function_combo'):
+            self.function_combo.setEnabled(connected)
+        
+        # 更新按鈕文字
+        if connected and self.output_enabled:
+            self.output_btn.setText("關閉輸出")
+        else:
+            self.output_btn.setText("開啟輸出")
+            
+        # 更新提示信息
+        self.update_status_hint()
+        
+    def update_status_hint(self):
+        """更新狀態提示"""
+        if not (self.keithley and self.keithley.connected):
+            hint = "請先連接儀器"
+        elif not self.settings_applied:
+            hint = "請先應用設定，再開啟輸出"
+        elif not self.output_enabled:
+            hint = "可以開啟輸出開始測量"
+        else:
+            hint = "輸出已開啟，可進行測量"
+            
+        # 在操作日誌中顯示提示
+        if hasattr(self, 'last_hint') and self.last_hint != hint:
+            self.log_message(f"💡 操作提示: {hint}")
+            self.last_hint = hint
         
     def create_control_panel(self):
         """創建左側控制面板"""
@@ -266,15 +334,15 @@ class KeithleyControlWidget(QWidget):
                 
             try:
                 self.keithley = Keithley2461(ip_address=ip_address)
-                if self.keithley.connect({"method": "visa"}):
+                if self.keithley.connect():  # 現在只使用Socket
                     self.log_message(f"成功連接到設備: {ip_address}")
                     
+                    # 重置狀態
+                    self.settings_applied = False
+                    self.output_enabled = False
+                    
                     # 更新按鈕狀態
-                    self.connect_btn.setText("斷開連接")
-                    self.output_btn.setEnabled(True)
-                    self.apply_btn.setEnabled(True)
-                    self.measure_btn.setEnabled(True)
-                    self.ip_input.setEnabled(False)
+                    self.update_button_states()
                     
                     # 初始化設備
                     self.keithley.reset()
@@ -313,13 +381,12 @@ class KeithleyControlWidget(QWidget):
                 
             self.keithley = None
             
+            # 重置狀態
+            self.settings_applied = False
+            self.output_enabled = False
+            
             # 更新UI狀態
-            self.connect_btn.setText("連接")
-            self.output_btn.setText("開啟輸出")
-            self.output_btn.setEnabled(False)
-            self.apply_btn.setEnabled(False)
-            self.measure_btn.setEnabled(False)
-            self.ip_input.setEnabled(True)
+            self.update_button_states()
             self.auto_measure_cb.setChecked(False)
             
             # 發送連接狀態信號
@@ -348,6 +415,12 @@ class KeithleyControlWidget(QWidget):
                 self.keithley.set_current(current, voltage_limit=voltage_limit)
                 self.log_message(f"設定電流源: {current}A, 電壓限制: {voltage_limit}V")
                 
+            # 標記設定已應用
+            self.settings_applied = True
+            
+            # 更新按鈕狀態
+            self.update_button_states()
+                
         except Exception as e:
             QMessageBox.critical(self, "設定錯誤", f"應用設定時發生錯誤: {str(e)}")
             self.log_message(f"設定錯誤: {e}")
@@ -364,13 +437,16 @@ class KeithleyControlWidget(QWidget):
             if current_state:
                 # 關閉輸出
                 self.keithley.output_off()
-                self.output_btn.setText("開啟輸出")
+                self.output_enabled = False
                 self.log_message("輸出已關閉")
             else:
                 # 開啟輸出
                 self.keithley.output_on()
-                self.output_btn.setText("關閉輸出")
+                self.output_enabled = True
                 self.log_message("輸出已開啟")
+                
+            # 更新按鈕狀態
+            self.update_button_states()
                 
         except Exception as e:
             QMessageBox.critical(self, "輸出控制錯誤", f"切換輸出狀態時發生錯誤: {str(e)}")

@@ -84,21 +84,51 @@ class InstrumentStatusWidget(QFrame):
             self.dp711_status.setStyleSheet("color: #e74c3c; font-weight: bold;")
             
     def disconnect_all(self):
-        """斷開所有儀器連接"""
+        """安全斷開所有儀器連接"""
+        # 檢查是否有儀器正在輸出
+        active_outputs = []
+        parent = self.parent()
+        
+        if parent and hasattr(parent, 'keithley_widget'):
+            kw = parent.keithley_widget
+            if hasattr(kw, 'output_enabled') and kw.output_enabled:
+                active_outputs.append("Keithley 2461")
+                
+        if parent and hasattr(parent, 'rigol_widget'):
+            rw = parent.rigol_widget
+            if hasattr(rw, 'output_enabled') and getattr(rw, 'output_enabled', False):
+                active_outputs.append("Rigol DP711")
+        
+        # 如果有活動輸出，先警告用戶
+        if active_outputs:
+            reply = QMessageBox.question(
+                self,
+                "安全確認",
+                f"檢測到以下儀器正在輸出:\n{', '.join(active_outputs)}\n\n"
+                "斷開連接將自動關閉所有輸出。\n是否繼續？",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        
         try:
-            # 直接斷開，不需要確認
+            # 安全斷開序列
             self.instrument_manager.disconnect_all()
             self.update_keithley_status(False)
             self.update_dp711_status(False)
             
-            # 通知父視窗更新儀器狀態
-            parent = self.parent()
+            # 通知各個 widget 斷開連接
             if parent:
-                # 斷開各個 widget 中的儀器
                 if hasattr(parent, 'keithley_widget'):
                     parent.keithley_widget.disconnect_device()
                 if hasattr(parent, 'rigol_widget'):
                     parent.rigol_widget.disconnect_device()
+            
+            # 顯示操作完成提示
+            if active_outputs:
+                QMessageBox.information(self, "斷開完成", "所有儀器輸出已安全關閉並斷開連接。")
                     
         except Exception as e:
             QMessageBox.critical(self, "錯誤", f"斷開連接時發生錯誤: {str(e)}")

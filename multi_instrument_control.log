@@ -170,3 +170,14 @@
 2025-08-25 16:21:46,328 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 16:21:46,328 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
 2025-08-25 16:21:46,356 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 16:23:02,011 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-25 16:23:02,011 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-25 16:23:04,754 - Keithley2461 - INFO - 成功連接到 192.168.0.100:5025
+2025-08-25 16:23:04,954 - Keithley2461 - INFO - 已切換到SCPI命令模式
+2025-08-25 16:23:04,957 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 16:23:05,961 - Keithley2461 - INFO - 儀器已重置
+2025-08-25 16:23:05,961 - src.data_logger - INFO - 開始記錄會話: session_20250825_162305
+2025-08-25 16:27:13,872 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-25 16:27:13,873 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-25 16:27:13,873 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-25 16:27:13,910 - Keithley2461 - INFO - 儀器已斷開連接
