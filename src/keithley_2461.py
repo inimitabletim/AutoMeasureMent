@@ -55,6 +55,16 @@ class Keithley2461(SourceMeterBase):
             self.connected = True
             self.logger.info(f"成功連接到 {self.ip_address}:{self.port}")
             
+            # 切換到 SCPI 命令模式 - 使用原始socket發送
+            try:
+                # 直接發送切換命令，不使用send_command方法
+                switch_cmd = ":SYST:LANG SCPI\n"
+                self.socket.send(switch_cmd.encode('utf-8'))
+                time.sleep(0.5)  # 增加等待時間
+                self.logger.info("已切換到SCPI命令模式")
+            except Exception as e:
+                self.logger.warning(f"切換SCPI模式失敗: {e}")
+                
             # 驗證連接
             response = self.query("*IDN?")
             if "2461" in response:
@@ -94,6 +104,15 @@ class Keithley2461(SourceMeterBase):
             self.connected = True
             self.logger.info(f"VISA成功連接到 {visa_address}")
             
+            # 切換到 SCPI 命令模式 - 使用VISA發送
+            try:
+                # 直接發送切換命令
+                self.instrument.write(":SYST:LANG SCPI")
+                time.sleep(0.5)  # 增加等待時間
+                self.logger.info("已切換到SCPI命令模式")
+            except Exception as e:
+                self.logger.warning(f"切換SCPI模式失敗: {e}")
+                
             # 驗證連接
             response = self.query("*IDN?")
             if "2461" in response:
@@ -109,16 +128,23 @@ class Keithley2461(SourceMeterBase):
             
         return self.connected
         
-    def connect(self, method: str = "visa") -> bool:
+    def connect(self, connection_params: Dict[str, Any] = None, method: str = "visa") -> bool:
         """
         連接到儀器
         
         Args:
+            connection_params: 連接參數 (可選，為了符合基類接口)
             method: 連接方法 ("visa" 或 "socket")
             
         Returns:
             bool: 連接成功返回True
         """
+        # 如果提供了connection_params，從中提取IP地址
+        if connection_params and 'ip_address' in connection_params:
+            self.ip_address = connection_params['ip_address']
+        if connection_params and 'method' in connection_params:
+            method = connection_params['method']
+            
         if method.lower() == "visa":
             return self.connect_via_visa()
         elif method.lower() == "socket":
@@ -165,11 +191,51 @@ class Keithley2461(SourceMeterBase):
                 command_bytes = (command + '\n').encode('utf-8')
                 self.socket.send(command_bytes)
                 
+            # 檢查儀器錯誤
+            time.sleep(0.05)  # 短暫等待讓儀器處理命令
+            self.check_instrument_errors(command)
+                
             self.logger.debug(f"發送命令: {command}")
             
         except Exception as e:
             self.logger.error(f"發送命令失敗: {e}")
             raise
+            
+    def check_instrument_errors(self, last_command: str = "") -> None:
+        """檢查儀器錯誤隊列並處理TSP錯誤"""
+        try:
+            # 查詢錯誤
+            if self.instrument:
+                error_response = self.instrument.query("SYST:ERR?")
+            elif self.socket:
+                error_cmd = "SYST:ERR?\n".encode('utf-8')
+                self.socket.send(error_cmd)
+                error_response = self.socket.recv(1024).decode('utf-8').strip()
+            else:
+                return
+                
+            # 檢查是否有錯誤
+            if not error_response.startswith("0,"):
+                if "-285" in error_response or "TSP" in error_response:
+                    self.logger.warning(f"檢測到TSP語法錯誤: {error_response}")
+                    self.logger.warning("嘗試切換到SCPI模式並重新發送命令")
+                    self.force_scpi_mode()
+                    
+                    # 重新發送上一個命令
+                    if last_command:
+                        time.sleep(0.2)
+                        if self.instrument:
+                            self.instrument.write(last_command)
+                        elif self.socket:
+                            command_bytes = (last_command + '\n').encode('utf-8')
+                            self.socket.send(command_bytes)
+                        self.logger.info(f"SCPI模式下重新發送命令: {last_command}")
+                else:
+                    self.logger.warning(f"儀器錯誤: {error_response}")
+                    
+        except Exception as e:
+            # 錯誤檢查失敗，忽略（可能是儀器還在TSP模式）
+            self.logger.debug(f"錯誤檢查失敗: {e}")
             
     def query(self, command: str) -> str:
         """
@@ -196,14 +262,53 @@ class Keithley2461(SourceMeterBase):
             return response
             
         except Exception as e:
-            self.logger.error(f"查詢命令失敗: {e}")
-            raise
+            # 如果出現TSP語法錯誤，嘗試切換到SCPI模式
+            if "-285" in str(e) or "TSP" in str(e):
+                self.logger.warning("檢測到TSP語法錯誤，嘗試切換到SCPI模式")
+                self.force_scpi_mode()
+                # 重新嘗試查詢命令
+                try:
+                    if self.instrument:
+                        response = self.instrument.query(command).strip()
+                    elif self.socket:
+                        command_bytes = (command + '\n').encode('utf-8')
+                        self.socket.send(command_bytes)
+                        response = self.socket.recv(1024).decode('utf-8').strip()
+                    self.logger.info(f"SCPI模式切換後重新查詢成功: {command}")
+                    return response
+                except:
+                    self.logger.error(f"切換SCPI模式後仍然失敗: {command}")
+                    raise
+            else:
+                self.logger.error(f"查詢命令失敗: {e}")
+                raise
             
     def reset(self) -> None:
         """重置儀器到預設狀態"""
+        # 強制切換到 SCPI 命令模式
+        self.force_scpi_mode()
+            
         self.send_command("*RST")
-        time.sleep(1)  # 等待重置完成
+        time.sleep(2)  # 等待重置完成
+        
+        # 重置後再次確保 SCPI 模式
+        self.force_scpi_mode()
+        
         self.logger.info("儀器已重置")
+        
+    def force_scpi_mode(self) -> None:
+        """強制切換到 SCPI 命令模式"""
+        try:
+            if self.instrument:  # VISA 連接
+                self.instrument.write(":SYST:LANG SCPI")
+            elif self.socket:    # Socket 連接
+                switch_cmd = ":SYST:LANG SCPI\n"
+                self.socket.send(switch_cmd.encode('utf-8'))
+            
+            time.sleep(0.5)
+            self.logger.debug("強制切換到SCPI模式")
+        except Exception as e:
+            self.logger.debug(f"SCPI模式切換: {e}")  # 降級為debug，避免過多錯誤訊息
         
     def get_identity(self) -> str:
         """獲取儀器識別信息"""
@@ -263,88 +368,9 @@ class Keithley2461(SourceMeterBase):
         self.send_command(f"SOUR:FUNC {function.upper()}")
         self.logger.info(f"設定源功能為: {function.upper()}")
         
-    def set_voltage(self, voltage: float, current_limit: float = 0.1) -> None:
-        """
-        設定電壓輸出
-        
-        Args:
-            voltage: 輸出電壓 (V)
-            current_limit: 電流限制 (A)
-        """
-        # 設定為電壓源模式
-        self.set_source_function("VOLT")
-        
-        # 設定電壓值
-        self.send_command(f"SOUR:VOLT {voltage}")
-        
-        # 設定電流限制
-        self.send_command(f"SOUR:VOLT:ILIM {current_limit}")
-        
-        self.current_voltage = voltage
-        self.logger.info(f"設定電壓: {voltage}V, 電流限制: {current_limit}A")
-        
-    def set_current(self, current: float, voltage_limit: float = 21.0) -> None:
-        """
-        設定電流輸出
-        
-        Args:
-            current: 輸出電流 (A)
-            voltage_limit: 電壓限制 (V)
-        """
-        # 設定為電流源模式
-        self.set_source_function("CURR")
-        
-        # 設定電流值
-        self.send_command(f"SOUR:CURR {current}")
-        
-        # 設定電壓限制
-        self.send_command(f"SOUR:CURR:VLIM {voltage_limit}")
-        
-        self.current_current = current
-        self.logger.info(f"設定電流: {current}A, 電壓限制: {voltage_limit}V")
-        
-    def output_on(self) -> None:
-        """開啟輸出"""
-        self.send_command("OUTP ON")
-        self.logger.info("輸出已開啟")
-        
-    def output_off(self) -> None:
-        """關閉輸出"""
-        self.send_command("OUTP OFF")
-        self.logger.info("輸出已關閉")
-        
-    def get_output_state(self) -> bool:
-        """獲取輸出狀態"""
-        response = self.query("OUTP?")
-        return bool(int(response))
-        
     # =================
     # 測量功能
     # =================
-    
-    def measure_voltage(self) -> float:
-        """
-        測量電壓
-        
-        Returns:
-            float: 測量的電壓值 (V)
-        """
-        response = self.query("MEAS:VOLT?")
-        voltage = float(response)
-        self.logger.debug(f"測量電壓: {voltage}V")
-        return voltage
-        
-    def measure_current(self) -> float:
-        """
-        測量電流
-        
-        Returns:
-            float: 測量的電流值 (A)
-        """
-        response = self.query("MEAS:CURR?")
-        current = float(response)
-        self.logger.debug(f"測量電流: {current}A")
-        return current
         
     def measure_resistance(self) -> float:
         """
@@ -432,3 +458,150 @@ class Keithley2461(SourceMeterBase):
         self.send_command("DISP:WATC:CHAN2:STAT ON") 
         self.send_command("DISP:WATC:CHAN1:FUNC VOLT")
         self.send_command("DISP:WATC:CHAN2:FUNC CURR")
+        
+    # =================
+    # 抽象方法實現
+    # =================
+    
+    def is_connected(self) -> bool:
+        """檢查儀器是否已連接"""
+        return self.connected
+        
+    def set_measure_function(self, function: str) -> None:
+        """設定測量功能
+        
+        Args:
+            function: 'voltage', 'current', 'resistance', 'power'
+        """
+        function_map = {
+            'voltage': 'VOLT',
+            'current': 'CURR', 
+            'resistance': 'RES',
+            'power': 'POW'
+        }
+        
+        if function.lower() not in function_map:
+            raise ValueError(f"不支援的測量功能: {function}")
+            
+        scpi_func = function_map[function.lower()]
+        self.send_command(f"SENS:FUNC '{scpi_func}'")
+        self.logger.info(f"設定測量功能為: {function}")
+        
+    def set_compliance(self, value: float, parameter: str) -> None:
+        """設定限制值
+        
+        Args:
+            value: 限制值
+            parameter: 'voltage' 或 'current'
+        """
+        if parameter.lower() == 'voltage':
+            self.send_command(f"SOUR:CURR:VLIM {value}")
+            self.logger.info(f"設定電壓限制: {value}V")
+        elif parameter.lower() == 'current':
+            self.send_command(f"SOUR:VOLT:ILIM {value}")
+            self.logger.info(f"設定電流限制: {value}A")
+        else:
+            raise ValueError(f"不支援的參數類型: {parameter}")
+    
+    # =================
+    # 修正方法簽名以匹配基類
+    # =================
+    
+    def set_voltage(self, voltage: float, channel: int = 1, current_limit: float = 0.1) -> None:
+        """
+        設定電壓輸出
+        
+        Args:
+            voltage: 輸出電壓 (V)
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+            current_limit: 電流限制 (A)
+        """
+        # 設定為電壓源模式
+        self.set_source_function("VOLT")
+        
+        # 設定電壓值
+        self.send_command(f"SOUR:VOLT {voltage}")
+        
+        # 設定電流限制
+        self.send_command(f"SOUR:VOLT:ILIM {current_limit}")
+        
+        self.current_voltage = voltage
+        self.logger.info(f"設定電壓: {voltage}V, 電流限制: {current_limit}A")
+        
+    def set_current(self, current: float, channel: int = 1, voltage_limit: float = 21.0) -> None:
+        """
+        設定電流輸出
+        
+        Args:
+            current: 輸出電流 (A)
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+            voltage_limit: 電壓限制 (V)
+        """
+        # 設定為電流源模式
+        self.set_source_function("CURR")
+        
+        # 設定電流值
+        self.send_command(f"SOUR:CURR {current}")
+        
+        # 設定電壓限制
+        self.send_command(f"SOUR:CURR:VLIM {voltage_limit}")
+        
+        self.current_current = current
+        self.logger.info(f"設定電流: {current}A, 電壓限制: {voltage_limit}V")
+        
+    def output_on(self, channel: int = 1) -> None:
+        """開啟輸出
+        
+        Args:
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+        """
+        self.send_command("OUTP ON")
+        self.logger.info("輸出已開啟")
+        
+    def output_off(self, channel: int = 1) -> None:
+        """關閉輸出
+        
+        Args:
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+        """
+        self.send_command("OUTP OFF")
+        self.logger.info("輸出已關閉")
+        
+    def measure_voltage(self, channel: int = 1) -> float:
+        """
+        測量電壓
+        
+        Args:
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+            
+        Returns:
+            float: 測量的電壓值 (V)
+        """
+        response = self.query("MEAS:VOLT?")
+        voltage = float(response)
+        self.logger.debug(f"測量電壓: {voltage}V")
+        return voltage
+        
+    def measure_current(self, channel: int = 1) -> float:
+        """
+        測量電流
+        
+        Args:
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+            
+        Returns:
+            float: 測量的電流值 (A)
+        """
+        response = self.query("MEAS:CURR?")
+        current = float(response)
+        self.logger.debug(f"測量電流: {current}A")
+        return current
+        
+    def get_output_state(self, channel: int = 1) -> bool:
+        """獲取輸出狀態
+        
+        Args:
+            channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
+        """
+        response = self.query("OUTP?")
+        return bool(int(response))

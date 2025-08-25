@@ -65,3 +65,62 @@
 2025-08-25 13:55:07,456 - gui_multi_instrument - INFO - ç³»çµ±ä¸»é¡Œ: dark
 2025-08-25 13:55:29,874 - gui_multi_instrument - INFO - æ‰€æœ‰å„€å™¨é€£æŽ¥å·²è‡ªå‹•æ–·é–‹
 2025-08-25 13:55:29,874 - gui_multi_instrument - INFO - å¤šå„€å™¨æŽ§åˆ¶ç³»çµ±æ­£å¸¸é—œé–‰
+2025-08-25 14:55:04,171 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 14:55:04,172 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 14:55:39,054 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 14:55:39,054 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 14:56:07,203 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 14:56:07,204 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 14:58:09,851 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 14:58:09,851 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 14:58:13,298 - Keithley2461 - ERROR - VISA³s±µ¥¢±Ñ: Could not locate a VISA implementation. Install either the IVI binary or pyvisa-py.
+2025-08-25 14:59:47,357 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 14:59:47,357 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 14:59:54,412 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 14:59:54,412 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 15:01:00,524 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:01:00,525 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:01:05,824 - Keithley2461 - ERROR - VISA³s±µ¥¢±Ñ: Could not locate a VISA implementation. Install either the IVI binary or pyvisa-py.
+2025-08-25 15:03:05,103 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:03:05,103 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:03:08,161 - Keithley2461 - INFO - VISA¦¨¥\³s±µ¨ì TCPIP::192.168.0.100::5025::SOCKET
+2025-08-25 15:03:08,162 - Keithley2461 - INFO - »ö¾¹ÃÑ§O: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 15:03:09,166 - Keithley2461 - INFO - »ö¾¹¤w­«¸m
+2025-08-25 15:03:09,166 - src.data_logger - INFO - ¶}©l°O¿ý·|¸Ü: session_20250825_150309
+2025-08-25 15:13:45,707 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ
+2025-08-25 15:13:45,708 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 15:13:45,708 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 15:13:45,736 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ
+2025-08-25 15:14:19,713 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:14:19,713 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:14:26,118 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 15:14:26,119 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 15:19:54,638 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:19:54,638 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:25:31,358 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:25:31,358 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:25:50,224 - Keithley2461 - INFO - VISA¦¨¥\³s±µ¨ì TCPIP::192.168.0.100::5025::SOCKET
+2025-08-25 15:25:50,226 - Keithley2461 - INFO - »ö¾¹ÃÑ§O: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 15:25:51,229 - Keithley2461 - INFO - »ö¾¹¤w­«¸m
+2025-08-25 15:25:51,230 - src.data_logger - INFO - ¶}©l°O¿ý·|¸Ü: session_20250825_152551
+2025-08-25 15:26:20,436 - Keithley2461 - INFO - ³]©w·½¥\¯à¬°: VOLT
+2025-08-25 15:26:20,436 - Keithley2461 - INFO - ³]©w¹qÀ£: 3.3V, ¹q¬y­­¨î: 0.01A
+2025-08-25 15:26:32,519 - Keithley2461 - ERROR - ¬d¸ß©R¥O¥¢±Ñ: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+2025-08-25 15:28:02,118 - Keithley2461 - ERROR - ¬d¸ß©R¥O¥¢±Ñ: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+2025-08-25 15:33:52,249 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ
+2025-08-25 15:33:52,249 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 15:33:52,250 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 15:33:52,284 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ
+2025-08-25 15:34:47,146 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î±Ò°Ê
+2025-08-25 15:34:47,146 - gui_multi_instrument - INFO - ¨t²Î¥DÃD: dark
+2025-08-25 15:34:51,819 - Keithley2461 - INFO - VISA¦¨¥\³s±µ¨ì TCPIP::192.168.0.100::5025::SOCKET
+2025-08-25 15:34:52,020 - Keithley2461 - INFO - »ö¾¹ÃÑ§O: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-25 15:34:53,125 - Keithley2461 - INFO - »ö¾¹¤w­«¸m
+2025-08-25 15:34:53,125 - src.data_logger - INFO - ¶}©l°O¿ý·|¸Ü: session_20250825_153453
+2025-08-25 15:35:19,638 - Keithley2461 - INFO - ³]©w·½¥\¯à¬°: VOLT
+2025-08-25 15:35:19,638 - Keithley2461 - INFO - ³]©w¹qÀ£: 3.3V, ¹q¬y­­¨î: 0.01A
+2025-08-25 15:35:31,386 - Keithley2461 - ERROR - ¬d¸ß©R¥O¥¢±Ñ: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+2025-08-25 15:36:46,058 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ
+2025-08-25 15:36:46,058 - gui_multi_instrument - INFO - ©Ò¦³»ö¾¹³s±µ¤w¦Û°ÊÂ_¶}
+2025-08-25 15:36:46,058 - gui_multi_instrument - INFO - ¦h»ö¾¹±±¨î¨t²Î¥¿±`Ãö³¬
+2025-08-25 15:36:46,091 - Keithley2461 - INFO - »ö¾¹¤wÂ_¶}³s±µ

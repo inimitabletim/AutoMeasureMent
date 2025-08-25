@@ -71,7 +71,7 @@ from src.keithley_2461 import Keithley2461
 from src.data_logger import DataLogger
 
 # 連接設備
-with Keithley2461(ip_address="192.168.1.100") as keithley:
+with Keithley2461(ip_address="192.168.0.100") as keithley:
     if keithley.connect("visa"):
         # 設定電壓源模式
         keithley.set_voltage(5.0, current_limit=0.1)

@@ -27,7 +27,10 @@ def check_dependencies():
         missing_deps.append('pyvisa')
         
     if missing_deps:
-        print("❌ 缺少必要依賴套件:")
+        try:
+            print("❌ 缺少必要依賴套件:")
+        except:
+            print("[ERROR] 缺少必要依賴套件:")
         for dep in missing_deps:
             print(f"  - {dep}")
         print("\n請執行以下命令安裝:")
@@ -42,7 +45,10 @@ def check_dependencies():
 
 def main():
     """主程式入口 - 啟動GUI"""
-    print("🚀 啟動 Keithley 2461 控制系統...")
+    try:
+        print("🚀 啟動 Keithley 2461 控制系統...")
+    except UnicodeEncodeError:
+        print("[START] 啟動 Keithley 2461 控制系統...")
     
     # 設定工作目錄
     script_dir = Path(__file__).parent.absolute()
@@ -61,7 +67,10 @@ def main():
         multi_gui_main()
         
     except ImportError as e:
-        print(f"❌ 匯入模組錯誤: {e}")
+        try:
+            print(f"❌ 匯入模組錯誤: {e}")
+        except:
+            print(f"[ERROR] 匯入模組錯誤: {e}")
         print("請確認:")
         print("1. 所有依賴套件已正確安裝")
         print("2. src 資料夾中的模組檔案存在")
@@ -70,18 +79,27 @@ def main():
         sys.exit(1)
         
     except KeyboardInterrupt:
-        print("\n👋 程式被用戶中斷")
+        try:
+            print("\n👋 程式被用戶中斷")
+        except:
+            print("\n[EXIT] 程式被用戶中斷")
         sys.exit(0)
         
     except Exception as e:
-        print(f"❌ 啟動GUI時發生錯誤: {e}")
+        try:
+            print(f"❌ 啟動GUI時發生錯誤: {e}")
+        except:
+            print(f"[ERROR] 啟動GUI時發生錯誤: {e}")
         print("請檢查:")
         print("1. Python 版本是否 >= 3.8")
         print("2. 依賴套件是否完整")
         print("3. 檔案權限是否正確")
         print("4. 顯示環境是否正確配置")
             
-        print("\n🔧 排除建議:")
+        try:
+            print("\n🔧 排除建議:")
+        except:
+            print("\n[INFO] 排除建議:")
         print("1. 檢查是否已安裝所有依賴: pip install -r requirements.txt")
         print("2. 檢查 Python 版本是否 >= 3.8")
         print("3. 檢查顯示環境是否正確")

@@ -124,7 +124,7 @@ class KeithleyGUI(QMainWindow):
         conn_layout = QGridLayout(connection_group)
         
         conn_layout.addWidget(QLabel("IP地址:"), 0, 0)
-        self.ip_input = QLineEdit("192.168.1.100")
+        self.ip_input = QLineEdit("192.168.0.100")
         conn_layout.addWidget(self.ip_input, 0, 1)
         
         self.connect_btn = QPushButton("連接")

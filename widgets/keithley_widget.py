@@ -19,6 +19,7 @@ from pyqtgraph import PlotWidget
 from src.keithley_2461 import Keithley2461
 from src.data_logger import DataLogger
 from src.theme_manager import ThemeStyleSheet
+from widgets.unit_input_widget import UnitInputWidget, UnitDisplayWidget
 
 
 class MeasurementWorker(QThread):
@@ -106,7 +107,7 @@ class KeithleyControlWidget(QWidget):
         conn_layout = QGridLayout(connection_group)
         
         conn_layout.addWidget(QLabel("IP地址:"), 0, 0)
-        self.ip_input = QLineEdit("192.168.1.100")
+        self.ip_input = QLineEdit("192.168.0.100")
         conn_layout.addWidget(self.ip_input, 0, 1)
         
         self.connect_btn = QPushButton("連接")
@@ -124,26 +125,18 @@ class KeithleyControlWidget(QWidget):
         self.function_combo.addItems(["電壓源", "電流源"])
         output_layout.addWidget(self.function_combo, 0, 1)
         
-        output_layout.addWidget(QLabel("電壓 (V):"), 1, 0)
-        self.voltage_spin = QDoubleSpinBox()
-        self.voltage_spin.setRange(-100, 100)
-        self.voltage_spin.setDecimals(3)
-        self.voltage_spin.setSingleStep(0.1)
-        output_layout.addWidget(self.voltage_spin, 1, 1)
+        output_layout.addWidget(QLabel("電壓:"), 1, 0)
+        self.voltage_input = UnitInputWidget("V", "", 6)
+        output_layout.addWidget(self.voltage_input, 1, 1)
         
-        output_layout.addWidget(QLabel("電流 (A):"), 2, 0)
-        self.current_spin = QDoubleSpinBox()
-        self.current_spin.setRange(-10, 10)
-        self.current_spin.setDecimals(6)
-        self.current_spin.setSingleStep(0.001)
-        output_layout.addWidget(self.current_spin, 2, 1)
+        output_layout.addWidget(QLabel("電流:"), 2, 0)
+        self.current_input = UnitInputWidget("A", "m", 6)
+        output_layout.addWidget(self.current_input, 2, 1)
         
-        output_layout.addWidget(QLabel("電流限制 (A):"), 3, 0)
-        self.current_limit_spin = QDoubleSpinBox()
-        self.current_limit_spin.setRange(0, 10)
-        self.current_limit_spin.setDecimals(3)
-        self.current_limit_spin.setValue(0.1)
-        output_layout.addWidget(self.current_limit_spin, 3, 1)
+        output_layout.addWidget(QLabel("電流限制:"), 3, 0)
+        self.current_limit_input = UnitInputWidget("A", "m", 3)
+        self.current_limit_input.set_base_value(0.1)  # 預設100mA
+        output_layout.addWidget(self.current_limit_input, 3, 1)
         
         self.output_btn = QPushButton("開啟輸出")
         self.output_btn.clicked.connect(self.toggle_output)
@@ -209,28 +202,20 @@ class KeithleyControlWidget(QWidget):
         font.setBold(True)
         
         data_layout.addWidget(QLabel("電壓:"), 0, 0)
-        self.voltage_label = QLabel("0.000000 V")
-        self.voltage_label.setFont(font)
-        self.voltage_label.setStyleSheet("color: #2196F3; background-color: white; padding: 5px; border: 1px solid #ddd;")
-        data_layout.addWidget(self.voltage_label, 0, 1)
+        self.voltage_display = UnitDisplayWidget("V", 6)
+        data_layout.addWidget(self.voltage_display, 0, 1)
         
         data_layout.addWidget(QLabel("電流:"), 0, 2)
-        self.current_label = QLabel("0.000000 A")
-        self.current_label.setFont(font)
-        self.current_label.setStyleSheet("color: #FF9800; background-color: white; padding: 5px; border: 1px solid #ddd;")
-        data_layout.addWidget(self.current_label, 0, 3)
+        self.current_display = UnitDisplayWidget("A", 6)
+        data_layout.addWidget(self.current_display, 0, 3)
         
         data_layout.addWidget(QLabel("電阻:"), 1, 0)
-        self.resistance_label = QLabel("∞ Ω")
-        self.resistance_label.setFont(font)
-        self.resistance_label.setStyleSheet("color: #4CAF50; background-color: white; padding: 5px; border: 1px solid #ddd;")
-        data_layout.addWidget(self.resistance_label, 1, 1)
+        self.resistance_display = UnitDisplayWidget("Ω", 2)
+        data_layout.addWidget(self.resistance_display, 1, 1)
         
         data_layout.addWidget(QLabel("功率:"), 1, 2)
-        self.power_label = QLabel("0.000000 W")
-        self.power_label.setFont(font)
-        self.power_label.setStyleSheet("color: #F44336; background-color: white; padding: 5px; border: 1px solid #ddd;")
-        data_layout.addWidget(self.power_label, 1, 3)
+        self.power_display = UnitDisplayWidget("W", 6)
+        data_layout.addWidget(self.power_display, 1, 3)
         
         layout.addWidget(data_group)
         
@@ -345,16 +330,16 @@ class KeithleyControlWidget(QWidget):
             
         try:
             function = self.function_combo.currentText()
-            voltage = self.voltage_spin.value()
-            current = self.current_spin.value()
-            current_limit = self.current_limit_spin.value()
+            voltage = self.voltage_input.get_base_value()
+            current = self.current_input.get_base_value()
+            current_limit = self.current_limit_input.get_base_value()
             
             if function == "電壓源":
-                # self.keithley.set_voltage(voltage, current_limit)
+                self.keithley.set_voltage(voltage, current_limit=current_limit)
                 self.log_message(f"設定電壓源: {voltage}V, 電流限制: {current_limit}A")
             else:
                 voltage_limit = 21.0  # 預設電壓限制
-                # self.keithley.set_current(current, voltage_limit)
+                self.keithley.set_current(current, voltage_limit=voltage_limit)
                 self.log_message(f"設定電流源: {current}A, 電壓限制: {voltage_limit}V")
                 
         except Exception as e:
@@ -367,15 +352,17 @@ class KeithleyControlWidget(QWidget):
             return
             
         try:
-            # current_state = self.keithley.get_output_state()
-            current_state = False  # 臨時值
+            # 獲取當前輸出狀態
+            current_state = self.keithley.get_output_state()
             
             if current_state:
-                # self.keithley.output_off()
+                # 關閉輸出
+                self.keithley.output_off()
                 self.output_btn.setText("開啟輸出")
                 self.log_message("輸出已關閉")
             else:
-                # self.keithley.output_on()
+                # 開啟輸出
+                self.keithley.output_on()
                 self.output_btn.setText("關閉輸出")
                 self.log_message("輸出已開啟")
                 
@@ -389,9 +376,7 @@ class KeithleyControlWidget(QWidget):
             return
             
         try:
-            # voltage, current, resistance, power = self.keithley.measure_all()
-            # 臨時測試數據
-            voltage, current, resistance, power = 5.0, 0.1, 50.0, 0.5
+            voltage, current, resistance, power = self.keithley.measure_all()
             self.update_measurement_display(voltage, current, resistance, power)
             self.log_message(f"測量: V={voltage:.6f}V, I={current:.6f}A, R={resistance:.2f}Ω, P={power:.6f}W")
             
@@ -421,16 +406,16 @@ class KeithleyControlWidget(QWidget):
     
     def update_measurement_display(self, voltage, current, resistance, power):
         """更新測量數據顯示"""
-        # 更新數值標籤
-        self.voltage_label.setText(f"{voltage:.6f} V")
-        self.current_label.setText(f"{current:.6f} A")
+        # 更新數值顯示
+        self.voltage_display.set_value(voltage)
+        self.current_display.set_value(current)
         
         if abs(resistance) > 1e6:
-            self.resistance_label.setText("∞ Ω")
+            self.resistance_display.set_value(float('inf'))
         else:
-            self.resistance_label.setText(f"{resistance:.2f} Ω")
+            self.resistance_display.set_value(resistance)
             
-        self.power_label.setText(f"{power:.6f} W")
+        self.power_display.set_value(power)
         
         # 更新圖表數據
         current_time = (datetime.now() - self.start_time).total_seconds()
