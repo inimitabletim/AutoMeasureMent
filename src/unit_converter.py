@@ -18,7 +18,6 @@ class UnitConverter:
         'k': 1e3,    # Kilo
         '': 1.0,     # 基本單位
         'm': 1e-3,   # Milli
-        'u': 1e-6,   # Micro (μ)
         'μ': 1e-6,   # Micro
         'n': 1e-9,   # Nano
         'p': 1e-12,  # Pico

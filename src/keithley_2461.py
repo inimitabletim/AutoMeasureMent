@@ -5,9 +5,9 @@ Keithley 2461 SourceMeter控制模組
 
 import socket
 import time
-import logging
 from typing import Optional, Tuple, List, Dict, Any
 from src.instrument_base import SourceMeterBase
+from src.unified_logger import get_logger, log_instrument_command, log_connection_event, log_error
 
 
 class Keithley2461(SourceMeterBase):
@@ -34,6 +34,9 @@ class Keithley2461(SourceMeterBase):
         self.current_voltage = 0.0
         self.current_current = 0.0
         
+        # 使用統一日誌系統
+        self.logger = get_logger("Keithley2461")
+        
     def connect(self, connection_params: Dict[str, Any] = None) -> bool:
         """
         連接到儀器 (使用Socket)
@@ -57,7 +60,7 @@ class Keithley2461(SourceMeterBase):
             self.socket.settimeout(self.timeout)
             self.socket.connect((self.ip_address, self.port))
             self.connected = True
-            self.logger.info(f"成功連接到 {self.ip_address}:{self.port}")
+            log_connection_event("Keithley2461", "connected", f"{self.ip_address}:{self.port}")
             
             # 確保儀器使用 SCPI 命令模式
             try:
