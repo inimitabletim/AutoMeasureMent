@@ -298,3 +298,21 @@
 2025-08-25 17:58:18,205 - gui_multi_instrument - INFO - 系統主題: dark
 2025-08-25 17:58:21,862 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-25 17:58:21,863 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 11:03:08,349 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 11:03:08,350 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 11:03:16,725 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 11:03:16,725 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 11:04:56,759 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 11:04:56,759 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 11:05:20,809 - Keithley2461 - INFO - 成功連接到 192.168.0.100:5025
+2025-08-26 11:05:21,810 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 11:05:22,013 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-26 11:05:22,016 - Keithley2461 - INFO - 儀器連接成功，無錯誤
+2025-08-26 11:05:23,021 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 11:05:23,021 - src.data_logger - INFO - 開始記錄會話: session_20250826_110523
+2025-08-26 11:05:51,374 - Keithley2461 - INFO - 設定源功能為: VOLT
+2025-08-26 11:05:51,375 - Keithley2461 - INFO - 設定電壓: 3.3V, 電流限制: 9.999999999999999e-06A
+2025-08-26 11:06:06,230 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 11:06:06,230 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 11:06:06,230 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 11:06:06,259 - Keithley2461 - INFO - 儀器已斷開連接

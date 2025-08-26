@@ -387,7 +387,7 @@ class Keithley2461(SourceMeterBase):
         self.send_command(f"SOUR:CURR:LIM {current_limit_str}")
         
         self.current_voltage = voltage
-        self.logger.info(f"設定電壓: {voltage}V, 電流限制: {current_limit}A")
+        self.logger.info(f"設定電壓: {voltage_str}V, 電流限制: {current_limit_str}A")
         
     def set_current(self, current: float, channel: int = 1, voltage_limit: float = 21.0) -> None:
         """
@@ -409,7 +409,7 @@ class Keithley2461(SourceMeterBase):
         self.send_command(f"SOUR:VOLT:LIM {voltage_limit_str}")
         
         self.current_current = current
-        self.logger.info(f"設定電流: {current}A, 電壓限制: {voltage_limit}V")
+        self.logger.info(f"設定電流: {current_str}A, 電壓限制: {voltage_limit_str}V")
         
     def output_on(self, channel: int = 1) -> None:
         """開啟輸出
