@@ -369,64 +369,146 @@ class Keithley2461(SourceMeterBase):
     # 修正方法簽名以匹配基類
     # =================
     
-    def set_voltage(self, voltage, channel: int = 1, current_limit = 0.1) -> None:
+    def _convert_unit_format(self, value_str: str) -> str:
         """
-        設定電壓輸出 - 支援數字或帶單位字串
+        將各種單位格式轉換為標準 SCPI 格式
+        
+        支援格式:
+        - "500mV" -> "500m" (毫伏轉為毫單位)
+        - "100uA" -> "100u" (微安轉為微單位)
+        - "3.3V" -> "3.3" (伏特不需要單位後綴)
+        - "100nA" -> "100n" (奈安轉為奈單位)
         
         Args:
-            voltage: 輸出電壓 (數字或帶單位字串，如 "3.3" 或 "3300m")
+            value_str: 輸入的值字串
+            
+        Returns:
+            str: 轉換後的 SCPI 相容格式
+        """
+        import re
+        
+        # 如果是純數字，直接返回
+        try:
+            float(value_str)
+            return value_str
+        except ValueError:
+            pass
+            
+        # 分離數字和單位
+        match = re.match(r'^([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)\s*([a-zA-Z]+)?$', value_str.strip())
+        if not match:
+            self.logger.warning(f"無法解析單位格式: {value_str}")
+            return value_str
+            
+        number = match.group(1)
+        unit = match.group(2) if match.group(2) else ""
+        
+        # 單位映射表 (將複合單位轉換為 SCPI 單字母格式)
+        unit_map = {
+            # 電壓單位
+            'V': '',      # 伏特不需要後綴
+            'mV': 'm',    # 毫伏
+            'uV': 'u',    # 微伏
+            'nV': 'n',    # 奈伏
+            'kV': 'k',    # 千伏
+            # 電流單位
+            'A': '',      # 安培不需要後綴
+            'mA': 'm',    # 毫安
+            'uA': 'u',    # 微安
+            'nA': 'n',    # 奈安
+            'pA': 'p',    # 皮安
+            # 已經是標準格式的單位
+            'm': 'm',     # 毫
+            'u': 'u',     # 微
+            'n': 'n',     # 奈
+            'p': 'p',     # 皮
+            'k': 'k',     # 千
+            'M': 'M',     # 兆
+        }
+        
+        # 轉換單位
+        scpi_unit = unit_map.get(unit, '')
+        
+        # 組合結果
+        result = f"{number}{scpi_unit}"
+        
+        self.logger.debug(f"單位轉換: '{value_str}' -> '{result}'")
+        return result
+    
+    def set_voltage(self, voltage, channel: int = 1, current_limit = 0.1) -> None:
+        """
+        設定電壓輸出 - 支援多種單位格式
+        
+        Args:
+            voltage: 輸出電壓 (支援格式: "3.3", "3.3V", "500mV", "500m")
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
-            current_limit: 電流限制 (數字或帶單位字串，如 "10m" 或 "10u")
+            current_limit: 電流限制 (支援格式: "0.1", "100mA", "100uA", "100u")
         """
         # 設定為電壓源模式
         self.set_source_function("VOLT")
         
-        # 超簡化版本 - 直接支援SCPI單位後綴，無需轉換
-        # SCPI支援 m, u, n, k, M 等單位後綴
-        # 例如: "10m" = 10毫安, "20u" = 20微伏
-        
-        # 檢查是否已經是帶單位的字串
+        # 轉換單位格式
         if isinstance(voltage, str):
-            voltage_str = voltage  
+            voltage_str = self._convert_unit_format(voltage)
         else:
             voltage_str = str(voltage)
             
         if isinstance(current_limit, str):
-            current_limit_str = current_limit
+            current_limit_str = self._convert_unit_format(current_limit)
         else:
             current_limit_str = str(current_limit)
         
+        # 發送 SCPI 命令前先檢查錯誤隊列
+        self.send_command("*CLS")  # 清除錯誤隊列
+        
+        # 發送命令
         self.send_command(f"SOUR:VOLT:LEV {voltage_str}")
-        self.send_command(f"SOUR:CURR:LIM {current_limit_str}")
+        self.send_command(f"SOUR:VOLT:ILIM {current_limit_str}")  # 使用正確的電流限制命令
+        
+        # 檢查是否有錯誤
+        errors = self.check_errors()
+        if errors:
+            self.logger.error(f"設定電壓時發生錯誤: {errors}")
+            raise RuntimeError(f"SCPI錯誤: {errors}")
         
         self.current_voltage = voltage
         self.logger.info(f"設定電壓: {voltage_str}, 電流限制: {current_limit_str}")
         
     def set_current(self, current, channel: int = 1, voltage_limit = 21.0) -> None:
         """
-        設定電流輸出 - 支援數字或帶單位字串
+        設定電流輸出 - 支援多種單位格式
         
         Args:
-            current: 輸出電流 (數字或帶單位字串，如 "100m" 或 "10u")
+            current: 輸出電流 (支援格式: "0.1", "100mA", "100uA", "100u")
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
-            voltage_limit: 電壓限制 (數字或帶單位字串，如 "21" 或 "21000m")
+            voltage_limit: 電壓限制 (支援格式: "21", "21V", "21000mV", "21000m")
         """
         # 設定為電流源模式
         self.set_source_function("CURR")
         
-        # 超簡化版本 - 直接支援SCPI單位後綴
+        # 轉換單位格式
         if isinstance(current, str):
-            current_str = current
+            current_str = self._convert_unit_format(current)
         else:
             current_str = str(current)
             
         if isinstance(voltage_limit, str):
-            voltage_limit_str = voltage_limit
+            voltage_limit_str = self._convert_unit_format(voltage_limit)
         else:
             voltage_limit_str = str(voltage_limit)
         
+        # 發送 SCPI 命令前先檢查錯誤隊列
+        self.send_command("*CLS")  # 清除錯誤隊列
+        
+        # 發送命令
         self.send_command(f"SOUR:CURR:LEV {current_str}")
-        self.send_command(f"SOUR:VOLT:LIM {voltage_limit_str}")
+        self.send_command(f"SOUR:CURR:VLIM {voltage_limit_str}")  # 使用正確的電壓限制命令
+        
+        # 檢查是否有錯誤
+        errors = self.check_errors()
+        if errors:
+            self.logger.error(f"設定電流時發生錯誤: {errors}")
+            raise RuntimeError(f"SCPI錯誤: {errors}")
         
         self.current_current = current
         self.logger.info(f"設定電流: {current_str}, 電壓限制: {voltage_limit_str}")
