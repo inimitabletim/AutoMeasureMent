@@ -21,11 +21,11 @@ class UnitInputWidget(QWidget):
     def __init__(self, unit_symbol: str = "V", default_prefix: str = "", 
                  precision: int = 6, parent=None):
         """
-        初始化單位輸入框
+        初始化單位輸入框 - 簡化版，UI控制操作順序
         
         Args:
             unit_symbol: 單位符號 (V, A, Ω, W)
-            default_prefix: 預設前綴
+            default_prefix: 預設前綴  
             precision: 顯示精度
             parent: 父控件
         """
@@ -35,9 +35,6 @@ class UnitInputWidget(QWidget):
         self.precision = precision
         self.current_base_value = 0.0
         
-        # 防止循環更新的標誌
-        self.updating = False
-        
         self.setup_ui()
         
     def setup_ui(self):
@@ -46,10 +43,11 @@ class UnitInputWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(3)
         
-        # 數值輸入框
+        # 數值輸入框 - 初始禁用，等待用戶選擇單位
         self.value_edit = QLineEdit()
-        self.value_edit.setPlaceholderText("0.000000")
-        self.value_edit.setText("0.000000")
+        self.value_edit.setPlaceholderText("先選擇單位")
+        self.value_edit.setEnabled(False)  # 初始禁用
+        self.value_edit.setStyleSheet("QLineEdit:disabled { color: gray; background-color: #f5f5f5; }")
         
         # 設定輸入驗證器 - 允許數字、小數點、負號
         number_regex = QRegularExpression(r'^-?\d*\.?\d*$')
@@ -62,39 +60,31 @@ class UnitInputWidget(QWidget):
         
         layout.addWidget(self.value_edit, 1)
         
-        # 前綴選擇下拉框
+        # 前綴選擇下拉框 - 初始有提示選項
         self.prefix_combo = QComboBox()
         self.prefix_combo.addItems([
+            "─ 選擇單位 ─",  # 提示選項
             f"T{self.unit_symbol}",
             f"G{self.unit_symbol}",
             f"M{self.unit_symbol}",
             f"k{self.unit_symbol}",
             f"{self.unit_symbol}",
             f"m{self.unit_symbol}",
-            f"u{self.unit_symbol}",
+            f"µ{self.unit_symbol}",  # 使用µ替代u
             f"n{self.unit_symbol}",
             f"p{self.unit_symbol}",
             f"f{self.unit_symbol}"
         ])
         
-        # 設定預設前綴
-        default_text = f"{self.default_prefix}{self.unit_symbol}"
-        index = self.prefix_combo.findText(default_text)
-        if index >= 0:
-            self.prefix_combo.setCurrentIndex(index)
-        else:
-            # 預設選擇基本單位
-            self.prefix_combo.setCurrentText(f"{self.unit_symbol}")
+        # 預設選擇提示選項
+        self.prefix_combo.setCurrentIndex(0)
         
         self.prefix_combo.currentTextChanged.connect(self.on_prefix_changed)
         
         layout.addWidget(self.prefix_combo)
         
     def on_value_changed(self, text: str):
-        """數值改變時的處理"""
-        if self.updating:  # 防止循環更新
-            return
-            
+        """數值改變時的處理 - 簡化版"""
         try:
             if text.strip() == "" or text.strip() == "-":
                 return
@@ -126,16 +116,32 @@ class UnitInputWidget(QWidget):
             self.value_edit.setText("0.000000")
     
     def on_prefix_changed(self, prefix_text: str):
-        """前綴改變時的處理"""
-        if self.updating:  # 防止循環更新
+        """前綴改變時的處理 - 簡化版UI控制"""
+        # 如果選擇的是提示選項，禁用TextField
+        if prefix_text == "─ 選擇單位 ─":
+            self.value_edit.setEnabled(False)
+            self.value_edit.setPlaceholderText("先選擇單位")
+            self.value_edit.clear()
             return
-            
-        # 保持相同的基本單位值，但更新顯示
-        self.set_base_value(self.current_base_value)
+        
+        # 選擇了有效單位，啟用TextField
+        self.value_edit.setEnabled(True)
+        self.value_edit.setPlaceholderText("輸入數值")
+        self.value_edit.setText("0")
+        self.value_edit.selectAll()  # 選中所有文字方便輸入
+        self.value_edit.setFocus()   # 設置焦點到輸入框
+        
+        # 更新當前值
+        self.on_value_changed(self.value_edit.text())
     
     def get_current_prefix(self) -> str:
         """獲取當前選擇的前綴"""
         prefix_text = self.prefix_combo.currentText()
+        
+        # 忽略提示選項
+        if prefix_text == "─ 選擇單位 ─" or not prefix_text:
+            return ""
+            
         # 移除單位符號，獲取前綴
         prefix = prefix_text.replace(self.unit_symbol, "")
         return prefix
@@ -164,31 +170,29 @@ class UnitInputWidget(QWidget):
     
     def set_base_value(self, base_value: float):
         """
-        設定基本單位值 - 順序無關，智能同步
+        設定基本單位值 - 簡化版，解決9.999999顯示問題
         
         Args:
             base_value: 基本單位的數值
         """
-        self.updating = True  # 開始更新，防止循環
-        
         self.current_base_value = base_value
         current_prefix = self.get_current_prefix()
         
-        # 使用固定小數位數，避免浮點數精度問題
+        # 如果沒有選擇有效單位，不更新顯示
+        if not current_prefix or current_prefix == "":
+            return
+        
+        # 計算顯示值並修正浮點數精度問題
         if current_prefix in UnitConverter.PREFIXES:
             display_value = base_value / UnitConverter.PREFIXES[current_prefix]
-            # 格式化為固定精度，避免 9.999999e-06 這類問題
-            formatted_value = f"{display_value:.{self.precision}f}".rstrip('0').rstrip('.')
-            if '.' not in formatted_value:
-                formatted_value += '.0'
+            # 使用較高精度計算，然後格式化顯示
+            if abs(display_value) < 1e-12:
+                formatted_value = "0"
+            else:
+                # 先四捨五入到合理精度，再格式化
+                rounded_value = round(display_value, self.precision)
+                formatted_value = f"{rounded_value:g}"  # 使用g格式自動選擇最佳顯示
             self.value_edit.setText(formatted_value)
-        else:
-            formatted_value = f"{base_value:.{self.precision}f}".rstrip('0').rstrip('.')
-            if '.' not in formatted_value:
-                formatted_value += '.0'
-            self.value_edit.setText(formatted_value)
-            
-        self.updating = False  # 完成更新
     
     def get_base_value(self) -> float:
         """獲取基本單位值"""
