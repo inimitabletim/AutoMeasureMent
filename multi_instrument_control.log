@@ -358,3 +358,37 @@
 2025-08-26 11:47:55,366 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
 2025-08-26 11:47:55,366 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
 2025-08-26 11:47:55,400 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 14:29:15,026 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 14:29:15,026 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 14:29:18,213 - Keithley2461 - INFO - 成功連接到 192.168.0.100:5025
+2025-08-26 14:29:19,215 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 14:29:19,416 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-26 14:29:19,418 - Keithley2461 - INFO - 儀器連接成功，無錯誤
+2025-08-26 14:29:20,423 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 14:29:20,423 - src.data_logger - INFO - 開始記錄會話: session_20250826_142920
+2025-08-26 14:29:46,989 - Keithley2461 - INFO - 設定源功能為: VOLT
+2025-08-26 14:29:46,989 - Keithley2461 - INFO - 設定電壓: 3.3V, 電流限制: 0.1A
+2025-08-26 14:36:00,881 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 14:36:00,881 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 14:36:00,881 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 14:36:00,927 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 14:39:02,082 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 14:39:02,083 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 14:39:10,381 - Keithley2461 - INFO - 成功連接到 192.168.0.100:5025
+2025-08-26 14:39:11,382 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 14:39:11,586 - Keithley2461 - INFO - 儀器識別: KEITHLEY INSTRUMENTS,MODEL 2461,04100891,1.7.1e
+2025-08-26 14:39:11,587 - Keithley2461 - INFO - 儀器連接成功，無錯誤
+2025-08-26 14:39:12,593 - Keithley2461 - INFO - 儀器已重置
+2025-08-26 14:39:12,593 - src.data_logger - INFO - 開始記錄會話: session_20250826_143912
+2025-08-26 14:40:29,207 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 14:40:29,208 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 14:40:29,208 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 14:40:29,247 - Keithley2461 - INFO - 儀器已斷開連接
+2025-08-26 14:43:26,964 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 14:43:26,964 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 14:44:49,834 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 14:44:49,835 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉
+2025-08-26 14:48:52,326 - gui_multi_instrument - INFO - 多儀器控制系統啟動
+2025-08-26 14:48:52,326 - gui_multi_instrument - INFO - 系統主題: dark
+2025-08-26 14:48:55,830 - gui_multi_instrument - INFO - 所有儀器連接已自動斷開
+2025-08-26 14:48:55,830 - gui_multi_instrument - INFO - 多儀器控制系統正常關閉

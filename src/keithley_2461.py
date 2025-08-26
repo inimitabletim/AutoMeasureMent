@@ -366,50 +366,67 @@ class Keithley2461(SourceMeterBase):
     # 修正方法簽名以匹配基類
     # =================
     
-    def set_voltage(self, voltage: float, channel: int = 1, current_limit: float = 0.1) -> None:
+    def set_voltage(self, voltage, channel: int = 1, current_limit = 0.1) -> None:
         """
-        設定電壓輸出
+        設定電壓輸出 - 支援數字或帶單位字串
         
         Args:
-            voltage: 輸出電壓 (V)
+            voltage: 輸出電壓 (數字或帶單位字串，如 "3.3" 或 "3300m")
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
-            current_limit: 電流限制 (A)
+            current_limit: 電流限制 (數字或帶單位字串，如 "10m" 或 "10u")
         """
         # 設定為電壓源模式
         self.set_source_function("VOLT")
         
-        # 設定電壓值和電流限制 - 修正浮點數精度問題
-        # 格式化為固定小數位數，避免科學記數法
-        voltage_str = f"{voltage:.6f}".rstrip('0').rstrip('.')
-        current_limit_str = f"{current_limit:.9f}".rstrip('0').rstrip('.')
+        # 超簡化版本 - 直接支援SCPI單位後綴，無需轉換
+        # SCPI支援 m, u, n, k, M 等單位後綴
+        # 例如: "10m" = 10毫安, "20u" = 20微伏
+        
+        # 檢查是否已經是帶單位的字串
+        if isinstance(voltage, str):
+            voltage_str = voltage  
+        else:
+            voltage_str = str(voltage)
+            
+        if isinstance(current_limit, str):
+            current_limit_str = current_limit
+        else:
+            current_limit_str = str(current_limit)
         
         self.send_command(f"SOUR:VOLT:LEV {voltage_str}")
         self.send_command(f"SOUR:CURR:LIM {current_limit_str}")
         
         self.current_voltage = voltage
-        self.logger.info(f"設定電壓: {voltage_str}V, 電流限制: {current_limit_str}A")
+        self.logger.info(f"設定電壓: {voltage_str}, 電流限制: {current_limit_str}")
         
-    def set_current(self, current: float, channel: int = 1, voltage_limit: float = 21.0) -> None:
+    def set_current(self, current, channel: int = 1, voltage_limit = 21.0) -> None:
         """
-        設定電流輸出
+        設定電流輸出 - 支援數字或帶單位字串
         
         Args:
-            current: 輸出電流 (A)
+            current: 輸出電流 (數字或帶單位字串，如 "100m" 或 "10u")
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
-            voltage_limit: 電壓限制 (V)
+            voltage_limit: 電壓限制 (數字或帶單位字串，如 "21" 或 "21000m")
         """
         # 設定為電流源模式
         self.set_source_function("CURR")
         
-        # 設定電流值和電壓限制 - 修正浮點數精度問題  
-        current_str = f"{current:.9f}".rstrip('0').rstrip('.')
-        voltage_limit_str = f"{voltage_limit:.6f}".rstrip('0').rstrip('.')
+        # 超簡化版本 - 直接支援SCPI單位後綴
+        if isinstance(current, str):
+            current_str = current
+        else:
+            current_str = str(current)
+            
+        if isinstance(voltage_limit, str):
+            voltage_limit_str = voltage_limit
+        else:
+            voltage_limit_str = str(voltage_limit)
         
         self.send_command(f"SOUR:CURR:LEV {current_str}")
         self.send_command(f"SOUR:VOLT:LIM {voltage_limit_str}")
         
         self.current_current = current
-        self.logger.info(f"設定電流: {current_str}A, 電壓限制: {voltage_limit_str}V")
+        self.logger.info(f"設定電流: {current_str}, 電壓限制: {voltage_limit_str}")
         
     def output_on(self, channel: int = 1) -> None:
         """開啟輸出

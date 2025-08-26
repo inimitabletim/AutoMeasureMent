@@ -397,23 +397,36 @@ class KeithleyControlWidget(QWidget):
             self.log_message(f"斷開連接時發生錯誤: {e}")
     
     def apply_settings(self):
-        """應用設定"""
+        """應用設定 - 超簡化版，直接傳送帶單位的字串"""
         if not self.keithley or not self.keithley.connected:
             return
             
         try:
             function = self.function_combo.currentText()
-            voltage = self.voltage_input.get_base_value()
-            current = self.current_input.get_base_value()
-            current_limit = self.current_limit_input.get_base_value()
+            
+            # 獲取數值和單位，組合成簡單字串
+            # 例如: "3.3" + "V" = "3.3", "10" + "mA" = "10m"
+            voltage_text = self.voltage_input.value_edit.text()
+            voltage_unit = self.voltage_input.get_current_prefix()
+            voltage_str = f"{voltage_text}{voltage_unit}" if voltage_unit else voltage_text
+            
+            current_text = self.current_input.value_edit.text()
+            current_unit = self.current_input.get_current_prefix()
+            current_str = f"{current_text}{current_unit}" if current_unit else current_text
+            
+            current_limit_text = self.current_limit_input.value_edit.text()
+            current_limit_unit = self.current_limit_input.get_current_prefix()
+            current_limit_str = f"{current_limit_text}{current_limit_unit}" if current_limit_unit else current_limit_text
             
             if function == "電壓源":
-                self.keithley.set_voltage(voltage, current_limit=current_limit)
-                self.log_message(f"設定電壓源: {voltage}V, 電流限制: {current_limit}A")
+                # 直接傳送帶單位的字串給SCPI
+                self.keithley.set_voltage(voltage_str, current_limit=current_limit_str)
+                self.log_message(f"設定電壓源: {voltage_str}V, 電流限制: {current_limit_str}A")
             else:
-                voltage_limit = 21.0  # 預設電壓限制
-                self.keithley.set_current(current, voltage_limit=voltage_limit)
-                self.log_message(f"設定電流源: {current}A, 電壓限制: {voltage_limit}V")
+                # 電壓限制也可以用帶單位的字串
+                voltage_limit_str = "21"  # 預設21V
+                self.keithley.set_current(current_str, voltage_limit=voltage_limit_str)
+                self.log_message(f"設定電流源: {current_str}A, 電壓限制: {voltage_limit_str}V")
                 
             # 標記設定已應用
             self.settings_applied = True

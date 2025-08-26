@@ -135,7 +135,7 @@ class UnitInputWidget(QWidget):
         self.on_value_changed(self.value_edit.text())
     
     def get_current_prefix(self) -> str:
-        """獲取當前選擇的前綴"""
+        """獲取當前選擇的前綴 - 轉換為SCPI格式"""
         prefix_text = self.prefix_combo.currentText()
         
         # 忽略提示選項
@@ -144,6 +144,11 @@ class UnitInputWidget(QWidget):
             
         # 移除單位符號，獲取前綴
         prefix = prefix_text.replace(self.unit_symbol, "")
+        
+        # 轉換µ為u (SCPI使用u代表micro)
+        if prefix == "µ":
+            prefix = "u"
+            
         return prefix
     
     def set_value_and_prefix(self, value: float, prefix: str = ""):
