@@ -43,11 +43,10 @@ class UnitInputWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(3)
         
-        # 數值輸入框 - 初始禁用，等待用戶選擇單位
+        # 數值輸入框 - 現在可以隨時輸入
         self.value_edit = QLineEdit()
-        self.value_edit.setPlaceholderText("先選擇單位")
-        self.value_edit.setEnabled(False)  # 初始禁用
-        self.value_edit.setStyleSheet("QLineEdit:disabled { color: gray; background-color: #f5f5f5; }")
+        self.value_edit.setPlaceholderText("輸入數值")
+        self.value_edit.setText("0")  # 預設值
         
         # 設定輸入驗證器 - 允許數字、小數點、負號
         number_regex = QRegularExpression(r'^-?\d*\.?\d*$')
@@ -60,24 +59,25 @@ class UnitInputWidget(QWidget):
         
         layout.addWidget(self.value_edit, 1)
         
-        # 前綴選擇下拉框 - 初始有提示選項
+        # 前綴選擇下拉框 - 簡化範圍 (k到n)
         self.prefix_combo = QComboBox()
         self.prefix_combo.addItems([
-            "─ 選擇單位 ─",  # 提示選項
-            f"T{self.unit_symbol}",
-            f"G{self.unit_symbol}",
-            f"M{self.unit_symbol}",
-            f"k{self.unit_symbol}",
-            f"{self.unit_symbol}",
-            f"m{self.unit_symbol}",
-            f"µ{self.unit_symbol}",  # 使用µ替代u
-            f"n{self.unit_symbol}",
-            f"p{self.unit_symbol}",
-            f"f{self.unit_symbol}"
+            f"k{self.unit_symbol}",  # kilo
+            f"{self.unit_symbol}",   # 基本單位
+            f"m{self.unit_symbol}",  # milli
+            f"µ{self.unit_symbol}",  # micro
+            f"n{self.unit_symbol}",  # nano
         ])
         
-        # 預設選擇提示選項
-        self.prefix_combo.setCurrentIndex(0)
+        # 預設選擇基本單位
+        default_index = 1  # 基本單位位置
+        if self.default_prefix:
+            # 如果有指定預設前綴，嘗試找到它
+            target_text = f"{self.default_prefix}{self.unit_symbol}"
+            index = self.prefix_combo.findText(target_text)
+            if index >= 0:
+                default_index = index
+        self.prefix_combo.setCurrentIndex(default_index)
         
         self.prefix_combo.currentTextChanged.connect(self.on_prefix_changed)
         
@@ -116,30 +116,18 @@ class UnitInputWidget(QWidget):
             self.value_edit.setText("0.000000")
     
     def on_prefix_changed(self, prefix_text: str):
-        """前綴改變時的處理 - 簡化版UI控制"""
-        # 如果選擇的是提示選項，禁用TextField
-        if prefix_text == "─ 選擇單位 ─":
-            self.value_edit.setEnabled(False)
-            self.value_edit.setPlaceholderText("先選擇單位")
-            self.value_edit.clear()
-            return
-        
-        # 選擇了有效單位，啟用TextField
-        self.value_edit.setEnabled(True)
-        self.value_edit.setPlaceholderText("輸入數值")
-        self.value_edit.setText("0")
-        self.value_edit.selectAll()  # 選中所有文字方便輸入
-        self.value_edit.setFocus()   # 設置焦點到輸入框
-        
-        # 更新當前值
-        self.on_value_changed(self.value_edit.text())
+        """前綴改變時的處理 - 超簡化版，無順序限制"""
+        # 現在只是字串拼接，不需要任何特殊處理
+        # 只需要觸發信號更新，讓外部知道單位改變了
+        current_text = self.value_edit.text()
+        if current_text:
+            self.on_value_changed(current_text)
     
     def get_current_prefix(self) -> str:
-        """獲取當前選擇的前綴 - 轉換為SCPI格式"""
+        """獲取當前選擇的前綴 - SCPI格式"""
         prefix_text = self.prefix_combo.currentText()
         
-        # 忽略提示選項
-        if prefix_text == "─ 選擇單位 ─" or not prefix_text:
+        if not prefix_text:
             return ""
             
         # 移除單位符號，獲取前綴
