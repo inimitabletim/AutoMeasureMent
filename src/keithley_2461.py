@@ -371,19 +371,19 @@ class Keithley2461(SourceMeterBase):
     
     def _convert_unit_format(self, value_str: str) -> str:
         """
-        將各種單位格式轉換為標準 SCPI 格式
+        將各種單位格式轉換為數值格式，Keithley 2461 SCPI 不接受單位後綴
         
         支援格式:
-        - "500mV" -> "500m" (毫伏轉為毫單位)
-        - "100uA" -> "100u" (微安轉為微單位)
-        - "3.3V" -> "3.3" (伏特不需要單位後綴)
-        - "100nA" -> "100n" (奈安轉為奈單位)
+        - "500mV" -> "0.5" (毫伏轉為伏特)
+        - "100uA" -> "0.0001" (微安轉為安培) 
+        - "3.3V" -> "3.3" (伏特保持不變)
+        - "100nA" -> "1e-07" (奈安轉為安培)
         
         Args:
             value_str: 輸入的值字串
             
         Returns:
-            str: 轉換後的 SCPI 相容格式
+            str: 轉換後的純數值格式
         """
         import re
         
@@ -400,37 +400,47 @@ class Keithley2461(SourceMeterBase):
             self.logger.warning(f"無法解析單位格式: {value_str}")
             return value_str
             
-        number = match.group(1)
+        number = float(match.group(1))
         unit = match.group(2) if match.group(2) else ""
         
-        # 單位映射表 (將複合單位轉換為 SCPI 單字母格式)
-        unit_map = {
-            # 電壓單位
-            'V': '',      # 伏特不需要後綴
-            'mV': 'm',    # 毫伏
-            'uV': 'u',    # 微伏
-            'nV': 'n',    # 奈伏
-            'kV': 'k',    # 千伏
-            # 電流單位
-            'A': '',      # 安培不需要後綴
-            'mA': 'm',    # 毫安
-            'uA': 'u',    # 微安
-            'nA': 'n',    # 奈安
-            'pA': 'p',    # 皮安
-            # 已經是標準格式的單位
-            'm': 'm',     # 毫
-            'u': 'u',     # 微
-            'n': 'n',     # 奈
-            'p': 'p',     # 皮
-            'k': 'k',     # 千
-            'M': 'M',     # 兆
+        # 單位轉換係數表 (將所有單位轉換為基本單位的數值)
+        unit_multipliers = {
+            # 電壓單位 (轉換為伏特)
+            'V': 1.0,           # 伏特
+            'mV': 1e-3,         # 毫伏
+            'uV': 1e-6,         # 微伏
+            'nV': 1e-9,         # 奈伏
+            'pV': 1e-12,        # 皮伏
+            'kV': 1e3,          # 千伏
+            'MV': 1e6,          # 兆伏
+            
+            # 電流單位 (轉換為安培)
+            'A': 1.0,           # 安培
+            'mA': 1e-3,         # 毫安
+            'uA': 1e-6,         # 微安
+            'nA': 1e-9,         # 奈安
+            'pA': 1e-12,        # 皮安
+            'kA': 1e3,          # 千安
+            'MA': 1e6,          # 兆安
+            
+            # 已經是標準格式的單位符號
+            'm': 1e-3,          # 毫
+            'u': 1e-6,          # 微
+            'n': 1e-9,          # 奈
+            'p': 1e-12,         # 皮
+            'k': 1e3,           # 千
+            'M': 1e6,           # 兆
         }
         
-        # 轉換單位
-        scpi_unit = unit_map.get(unit, '')
+        # 轉換為數值
+        multiplier = unit_multipliers.get(unit, 1.0)
+        result_value = number * multiplier
         
-        # 組合結果
-        result = f"{number}{scpi_unit}"
+        # 格式化結果 (避免科學記號，但保持適當精度)
+        if abs(result_value) >= 1e6 or (abs(result_value) < 1e-6 and result_value != 0):
+            result = f"{result_value:.6e}"
+        else:
+            result = f"{result_value:.9g}"
         
         self.logger.debug(f"單位轉換: '{value_str}' -> '{result}'")
         return result
