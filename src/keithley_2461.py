@@ -180,14 +180,14 @@ class Keithley2461(SourceMeterBase):
             frequency: 頻率 (Hz)
             duration: 持續時間 (秒)
         """
-        self.send_command(f"SYST:BEEP {frequency}, {duration}")
+        self.send_command(f":SYST:BEEP {frequency}, {duration}")
         
     def check_errors(self) -> List[str]:
         """檢查儀器錯誤隊列"""
         errors = []
         try:
             while True:
-                error = self.query("SYST:ERR?")
+                error = self.query(":SYST:ERR?")
                 if error.startswith("0,"):
                     break  # 無更多錯誤
                 errors.append(error)
@@ -223,11 +223,11 @@ class Keithley2461(SourceMeterBase):
         if function.upper() not in ["VOLT", "CURR"]:
             raise ValueError("功能必須是 'VOLT' 或 'CURR'")
             
-        # Keithley 2461 的正確 SCPI 語法 - 使用標準簡化格式
+        # Keithley 2461 的正確 SCPI 語法 - 使用完整格式
         if function.upper() == "VOLT":
-            self.send_command("SOUR:FUNC VOLT")
+            self.send_command(":SOUR:FUNC VOLT")
         else:
-            self.send_command("SOUR:FUNC CURR")
+            self.send_command(":SOUR:FUNC CURR")
         self.logger.info(f"設定源功能為: {function.upper()}")
         
     # =================
@@ -241,7 +241,7 @@ class Keithley2461(SourceMeterBase):
         Returns:
             float: 測量的電阻值 (Ω)
         """
-        response = self.query("MEAS:RES?")
+        response = self.query(":MEAS:RES?")
         resistance = float(response)
         self.logger.debug(f"測量電阻: {resistance}Ω")
         return resistance
@@ -253,7 +253,7 @@ class Keithley2461(SourceMeterBase):
         Returns:
             float: 測量的功率值 (W)
         """
-        response = self.query("MEAS:POW?")
+        response = self.query(":MEAS:POW?")
         power = float(response)
         self.logger.debug(f"測量功率: {power}W")
         return power
@@ -272,11 +272,17 @@ class Keithley2461(SourceMeterBase):
         if len(values) >= 4:
             voltage, current, resistance, power = values[:4]
         else:
-            # 備用方案：分別測量
+            # 優化的備用方案：減少 I/O 操作
             voltage = self.measure_voltage()
             current = self.measure_current()
-            resistance = self.measure_resistance()  
-            power = self.measure_power()
+            
+            # 直接計算電阻和功率，避免額外的 I/O 操作
+            if current != 0:
+                resistance = voltage / current
+            else:
+                resistance = float('inf')  # 電流為 0 時電阻為無窮大
+                
+            power = voltage * current
             
         self.logger.debug(f"全測量 - V:{voltage}V, I:{current}A, R:{resistance}Ω, P:{power}W")
         return voltage, current, resistance, power
@@ -296,8 +302,8 @@ class Keithley2461(SourceMeterBase):
         if not 0.01 <= nplc <= 10:
             raise ValueError("NPLC必須在0.01到10之間")
             
-        self.send_command(f"SENS:VOLT:NPLC {nplc}")
-        self.send_command(f"SENS:CURR:NPLC {nplc}")
+        self.send_command(f":SENS:VOLT:NPLC {nplc}")
+        self.send_command(f":SENS:CURR:NPLC {nplc}")
         self.logger.info(f"設定測量速度: {nplc} NPLC")
         
     def set_auto_range(self, enabled: bool = True) -> None:
@@ -308,18 +314,18 @@ class Keithley2461(SourceMeterBase):
             enabled: True為開啟自動範圍，False為關閉
         """
         state = "ON" if enabled else "OFF"
-        self.send_command(f"SENS:VOLT:RANG:AUTO {state}")
-        self.send_command(f"SENS:CURR:RANG:AUTO {state}")
-        self.send_command(f"SOUR:VOLT:RANG:AUTO {state}")
-        self.send_command(f"SOUR:CURR:RANG:AUTO {state}")
+        self.send_command(f":SENS:VOLT:RANG:AUTO {state}")
+        self.send_command(f":SENS:CURR:RANG:AUTO {state}")
+        self.send_command(f":SOUR:VOLT:RANG:AUTO {state}")
+        self.send_command(f":SOUR:CURR:RANG:AUTO {state}")
         self.logger.info(f"自動範圍: {'開啟' if enabled else '關閉'}")
         
     def configure_measurement_display(self) -> None:
         """配置顯示器顯示測量值"""
-        self.send_command("DISP:WATC:CHAN1:STAT ON")
-        self.send_command("DISP:WATC:CHAN2:STAT ON") 
-        self.send_command("DISP:WATC:CHAN1:FUNC VOLT")
-        self.send_command("DISP:WATC:CHAN2:FUNC CURR")
+        self.send_command(":DISP:WATC:CHAN1:STAT ON")
+        self.send_command(":DISP:WATC:CHAN2:STAT ON") 
+        self.send_command(":DISP:WATC:CHAN1:FUNC VOLT")
+        self.send_command(":DISP:WATC:CHAN2:FUNC CURR")
         
     # =================
     # 抽象方法實現
@@ -346,7 +352,7 @@ class Keithley2461(SourceMeterBase):
             raise ValueError(f"不支援的測量功能: {function}")
             
         scpi_func = function_map[function.lower()]
-        self.send_command(f"SENS:FUNC \"{scpi_func}\"")
+        self.send_command(f":SENS:FUNC \"{scpi_func}\"")
         self.logger.info(f"設定測量功能為: {function}")
         
     def set_compliance(self, value: float, parameter: str) -> None:
@@ -357,10 +363,10 @@ class Keithley2461(SourceMeterBase):
             parameter: 'voltage' 或 'current'
         """
         if parameter.lower() == 'voltage':
-            self.send_command(f"SOUR:CURR:VLIM {value}")
+            self.send_command(f":SOUR:CURR:VLIM {value}")
             self.logger.info(f"設定電壓限制: {value}V")
         elif parameter.lower() == 'current':
-            self.send_command(f"SOUR:VOLT:ILIM {value}")
+            self.send_command(f":SOUR:VOLT:ILIM {value}")
             self.logger.info(f"設定電流限制: {value}A")
         else:
             raise ValueError(f"不支援的參數類型: {parameter}")
@@ -472,8 +478,9 @@ class Keithley2461(SourceMeterBase):
         self.send_command("*CLS")  # 清除錯誤隊列
         
         # 發送命令
-        self.send_command(f"SOUR:VOLT:LEV {voltage_str}")
-        self.send_command(f"SOUR:VOLT:ILIM {current_limit_str}")  # 使用正確的電流限制命令
+        # 使用完整的 SCPI 命令格式
+        self.send_command(f":SOUR:VOLT:LEV {voltage_str}")
+        self.send_command(f":SOUR:VOLT:ILIM {current_limit_str}")  # 使用正確的電流限制命令
         
         # 檢查是否有錯誤
         errors = self.check_errors()
@@ -511,8 +518,9 @@ class Keithley2461(SourceMeterBase):
         self.send_command("*CLS")  # 清除錯誤隊列
         
         # 發送命令
-        self.send_command(f"SOUR:CURR:LEV {current_str}")
-        self.send_command(f"SOUR:CURR:VLIM {voltage_limit_str}")  # 使用正確的電壓限制命令
+        # 使用完整的 SCPI 命令格式
+        self.send_command(f":SOUR:CURR:LEV {current_str}")
+        self.send_command(f":SOUR:CURR:VLIM {voltage_limit_str}")  # 使用正確的電壓限制命令
         
         # 檢查是否有錯誤
         errors = self.check_errors()
@@ -529,7 +537,8 @@ class Keithley2461(SourceMeterBase):
         Args:
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
         """
-        self.send_command("OUTP ON")
+        # 使用完整的 SCPI 命令格式以提高相容性
+        self.send_command(":OUTP:STAT ON")
         self.logger.info("輸出已開啟")
         
     def output_off(self, channel: int = 1) -> None:
@@ -538,7 +547,8 @@ class Keithley2461(SourceMeterBase):
         Args:
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
         """
-        self.send_command("OUTP OFF")
+        # 使用完整的 SCPI 命令格式以提高相容性
+        self.send_command(":OUTP:STAT OFF")
         self.logger.info("輸出已關閉")
         
     def measure_voltage(self, channel: int = 1) -> float:
@@ -551,7 +561,7 @@ class Keithley2461(SourceMeterBase):
         Returns:
             float: 測量的電壓值 (V)
         """
-        response = self.query("MEAS:VOLT?")
+        response = self.query(":MEAS:VOLT?")
         voltage = float(response)
         self.logger.debug(f"測量電壓: {voltage}V")
         return voltage
@@ -566,7 +576,7 @@ class Keithley2461(SourceMeterBase):
         Returns:
             float: 測量的電流值 (A)
         """
-        response = self.query("MEAS:CURR?")
+        response = self.query(":MEAS:CURR?")
         current = float(response)
         self.logger.debug(f"測量電流: {current}A")
         return current
@@ -577,5 +587,6 @@ class Keithley2461(SourceMeterBase):
         Args:
             channel: 通道號（Keithley 2461只有1個通道，此參數被忽略）
         """
-        response = self.query(":OUTP?")
+        # 使用完整的 SCPI 命令格式
+        response = self.query(":OUTP:STAT?")
         return bool(int(response))
