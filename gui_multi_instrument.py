@@ -18,7 +18,7 @@ from src.rigol_dp711 import RigolDP711
 from src.data_logger import DataLogger
 from src.theme_manager import ThemeManager, ThemeStyleSheet
 from src.instrument_base import InstrumentManager
-from widgets.keithley_widget import KeithleyControlWidget
+from widgets.keithley_widget_professional import ProfessionalKeithleyWidget
 from widgets.rigol_widget import RigolControlWidget
 
 
@@ -252,7 +252,7 @@ class MultiInstrumentGUI(QMainWindow):
         self.tab_widget.setTabPosition(QTabWidget.TabPosition.North)
         
         # 創建各個控制 widget
-        self.keithley_widget = KeithleyControlWidget()
+        self.keithley_widget = ProfessionalKeithleyWidget()
         self.keithley_widget.set_theme(self.current_theme)
         
         self.rigol_widget = RigolControlWidget()
