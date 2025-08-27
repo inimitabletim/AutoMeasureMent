@@ -5,6 +5,7 @@ Keithley 2461 控制 Widget
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Optional
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
@@ -104,6 +105,98 @@ class KeithleyControlWidget(QWidget):
         # 初始化按鈕狀態（在所有UI組件創建完成後）
         self.update_button_states()
         
+    def create_voltage_source_params(self):
+        """創建電壓源參數控制區域"""
+        # 清空現有內容
+        self.clear_params_layout()
+        
+        # 電壓源參數群組
+        voltage_group = QGroupBox("🔋 電壓源參數")
+        voltage_layout = QGridLayout(voltage_group)
+        
+        # 輸出電壓
+        voltage_layout.addWidget(QLabel("輸出電壓:"), 0, 0)
+        self.voltage_input = UnitInputWidget("V", "", 6)
+        self.voltage_input.set_base_value(5.0)  # 預設5V，安全值
+        voltage_layout.addWidget(self.voltage_input, 0, 1)
+        
+        # 電流限制
+        voltage_layout.addWidget(QLabel("電流限制:"), 1, 0)
+        self.current_limit_input = UnitInputWidget("A", "m", 3)
+        self.current_limit_input.set_base_value(0.1)  # 預設100mA
+        voltage_layout.addWidget(self.current_limit_input, 1, 1)
+        
+        # 電壓範圍
+        voltage_layout.addWidget(QLabel("電壓範圍:"), 2, 0)
+        self.voltage_range_combo = QComboBox()
+        self.voltage_range_combo.addItems(["自動", "20V", "200V"])
+        voltage_layout.addWidget(self.voltage_range_combo, 2, 1)
+        
+        # 測量速度
+        voltage_layout.addWidget(QLabel("測量速度:"), 3, 0)
+        self.nplc_combo = QComboBox()
+        self.nplc_combo.addItems(["快速 (0.1)", "標準 (1.0)", "精確 (10)"])
+        self.nplc_combo.setCurrentIndex(1)  # 預設標準
+        voltage_layout.addWidget(self.nplc_combo, 3, 1)
+        
+        self.params_layout.addWidget(voltage_group)
+        
+    def create_current_source_params(self):
+        """創建電流源參數控制區域"""
+        # 清空現有內容
+        self.clear_params_layout()
+        
+        # 電流源參數群組
+        current_group = QGroupBox("⚡ 電流源參數")
+        current_layout = QGridLayout(current_group)
+        
+        # 輸出電流
+        current_layout.addWidget(QLabel("輸出電流:"), 0, 0)
+        self.current_input = UnitInputWidget("A", "m", 6)
+        self.current_input.set_base_value(0.01)  # 預設10mA
+        current_layout.addWidget(self.current_input, 0, 1)
+        
+        # 電壓限制
+        current_layout.addWidget(QLabel("電壓限制:"), 1, 0)
+        self.voltage_limit_input = UnitInputWidget("V", "", 3)
+        self.voltage_limit_input.set_base_value(21.0)  # 預設21V
+        current_layout.addWidget(self.voltage_limit_input, 1, 1)
+        
+        # 電流範圍
+        current_layout.addWidget(QLabel("電流範圍:"), 2, 0)
+        self.current_range_combo = QComboBox()
+        self.current_range_combo.addItems(["自動", "1mA", "10mA", "100mA", "1A"])
+        current_layout.addWidget(self.current_range_combo, 2, 1)
+        
+        # 測量速度
+        current_layout.addWidget(QLabel("測量速度:"), 3, 0)
+        self.nplc_combo = QComboBox()
+        self.nplc_combo.addItems(["快速 (0.1)", "標準 (1.0)", "精確 (10)"])
+        self.nplc_combo.setCurrentIndex(1)  # 預設標準
+        current_layout.addWidget(self.nplc_combo, 3, 1)
+        
+        self.params_layout.addWidget(current_group)
+        
+    def clear_params_layout(self):
+        """清空參數佈局"""
+        while self.params_layout.count():
+            child = self.params_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+                
+    def on_function_changed(self, function_text):
+        """當功能選擇改變時的處理"""
+        if function_text == "電壓源":
+            self.create_voltage_source_params()
+            self.log_message("🔋 切換到電壓源模式")
+        elif function_text == "電流源":
+            self.create_current_source_params()
+            self.log_message("⚡ 切換到電流源模式")
+            
+        # 重置應用狀態，需要重新應用設定
+        self.settings_applied = False
+        self.update_button_states()
+        
     def update_button_states(self):
         """更新按鈕狀態 - 智能操作流程控制"""
         # 確保按鈕已創建
@@ -125,6 +218,10 @@ class KeithleyControlWidget(QWidget):
         # 測量按鈕：連接後即可使用
         if hasattr(self, 'measure_btn'):
             self.measure_btn.setEnabled(connected)
+            
+        # 開始執行按鈕：需要連接且已應用設定
+        if hasattr(self, 'start_execution_btn'):
+            self.start_execution_btn.setEnabled(connected and self.settings_applied)
         
         # IP輸入框：未連接時可編輯
         if hasattr(self, 'ip_input'):
@@ -134,11 +231,19 @@ class KeithleyControlWidget(QWidget):
         if hasattr(self, 'voltage_input'):
             self.voltage_input.setEnabled(connected)
         if hasattr(self, 'current_input'):
-            self.current_input.setEnabled(connected)
+            self.current_input.setEnabled(connected)  
         if hasattr(self, 'current_limit_input'):
             self.current_limit_input.setEnabled(connected)
+        if hasattr(self, 'voltage_limit_input'):
+            self.voltage_limit_input.setEnabled(connected)
         if hasattr(self, 'function_combo'):
             self.function_combo.setEnabled(connected)
+        if hasattr(self, 'voltage_range_combo'):
+            self.voltage_range_combo.setEnabled(connected)
+        if hasattr(self, 'current_range_combo'):
+            self.current_range_combo.setEnabled(connected)
+        if hasattr(self, 'nplc_combo'):
+            self.nplc_combo.setEnabled(connected)
         
         # 更新按鈕文字
         if connected and self.output_enabled:
@@ -184,43 +289,65 @@ class KeithleyControlWidget(QWidget):
         
         layout.addWidget(connection_group)
         
-        # 輸出控制群組
-        output_group = QGroupBox("輸出控制")
-        output_layout = QGridLayout(output_group)
+        # 智能輸出控制群組 - 方案3實施
+        output_group = QGroupBox("智能輸出控制")
+        output_layout = QVBoxLayout(output_group)
         
-        output_layout.addWidget(QLabel("功能:"), 0, 0)
+        # 功能選擇區域
+        function_layout = QHBoxLayout()
+        function_layout.addWidget(QLabel("工作模式:"))
         self.function_combo = QComboBox()
         self.function_combo.addItems(["電壓源", "電流源"])
-        output_layout.addWidget(self.function_combo, 0, 1)
+        self.function_combo.currentTextChanged.connect(self.on_function_changed)
+        function_layout.addWidget(self.function_combo)
+        function_layout.addStretch()
+        output_layout.addLayout(function_layout)
         
-        output_layout.addWidget(QLabel("電壓:"), 1, 0)
-        self.voltage_input = UnitInputWidget("V", "", 6)
-        output_layout.addWidget(self.voltage_input, 1, 1)
+        # 動態參數區域容器
+        self.params_container = QWidget()
+        self.params_layout = QVBoxLayout(self.params_container)
+        self.params_layout.setContentsMargins(0, 0, 0, 0)
+        output_layout.addWidget(self.params_container)
         
-        output_layout.addWidget(QLabel("電流:"), 2, 0)
-        self.current_input = UnitInputWidget("A", "m", 6)
-        output_layout.addWidget(self.current_input, 2, 1)
+        # 初始化參數區域（預設為電壓源）
+        self.create_voltage_source_params()
         
-        output_layout.addWidget(QLabel("電流限制:"), 3, 0)
-        self.current_limit_input = UnitInputWidget("A", "m", 3)
-        self.current_limit_input.set_base_value(0.1)  # 預設100mA
-        output_layout.addWidget(self.current_limit_input, 3, 1)
-        
-        # 建立按鈕的水平佈局
+        # 操作按鈕區域
         button_layout = QHBoxLayout()
         
-        self.apply_btn = QPushButton("應用設定")
+        self.apply_btn = QPushButton("📝 應用設定")
         self.apply_btn.clicked.connect(self.apply_settings)
         self.apply_btn.setEnabled(False)
         button_layout.addWidget(self.apply_btn)
         
-        self.output_btn = QPushButton("開啟輸出")
+        self.output_btn = QPushButton("⚡ 開啟輸出")
         self.output_btn.clicked.connect(self.toggle_output)
         self.output_btn.setEnabled(False)
         button_layout.addWidget(self.output_btn)
         
-        # 將水平按鈕佈局加入到網格佈局
-        output_layout.addLayout(button_layout, 4, 0, 1, 2)
+        self.start_execution_btn = QPushButton("▶️ 開始執行")
+        self.start_execution_btn.clicked.connect(self.start_execution)
+        self.start_execution_btn.setEnabled(False)
+        self.start_execution_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        button_layout.addWidget(self.start_execution_btn)
+        
+        output_layout.addLayout(button_layout)
         
         layout.addWidget(output_group)
         
@@ -236,6 +363,7 @@ class KeithleyControlWidget(QWidget):
         self.measure_btn.clicked.connect(self.single_measurement)
         self.measure_btn.setEnabled(False)
         measure_layout.addWidget(self.measure_btn)
+        
         
         layout.addWidget(measure_group)
         
@@ -397,46 +525,87 @@ class KeithleyControlWidget(QWidget):
             self.log_message(f"斷開連接時發生錯誤: {e}")
     
     def apply_settings(self):
-        """應用設定 - 超簡化版，直接傳送帶單位的字串"""
+        """智能應用設定 - 根據選擇的模式動態應用參數"""
         if not self.keithley or not self.keithley.connected:
             return
             
         try:
             function = self.function_combo.currentText()
             
-            # 獲取數值和單位，組合成簡單字串
-            # 例如: "3.3" + "V" = "3.3", "10" + "mA" = "10m"
-            voltage_text = self.voltage_input.value_edit.text()
-            voltage_unit = self.voltage_input.get_current_prefix()
-            voltage_str = f"{voltage_text}{voltage_unit}" if voltage_unit else voltage_text
-            
-            current_text = self.current_input.value_edit.text()
-            current_unit = self.current_input.get_current_prefix()
-            current_str = f"{current_text}{current_unit}" if current_unit else current_text
-            
-            current_limit_text = self.current_limit_input.value_edit.text()
-            current_limit_unit = self.current_limit_input.get_current_prefix()
-            current_limit_str = f"{current_limit_text}{current_limit_unit}" if current_limit_unit else current_limit_text
+            # 設定測量速度
+            nplc_text = self.nplc_combo.currentText()
+            if "0.1" in nplc_text:
+                nplc_value = 0.1
+            elif "10" in nplc_text:
+                nplc_value = 10.0
+            else:
+                nplc_value = 1.0
+            self.keithley.set_measurement_speed(nplc_value)
             
             if function == "電壓源":
-                # 直接傳送帶單位的字串給SCPI
-                self.keithley.set_voltage(voltage_str, current_limit=current_limit_str)
-                self.log_message(f"設定電壓源: {voltage_str}V, 電流限制: {current_limit_str}A")
-            else:
-                # 電壓限制也可以用帶單位的字串
-                voltage_limit_str = "21"  # 預設21V
-                self.keithley.set_current(current_str, voltage_limit=voltage_limit_str)
-                self.log_message(f"設定電流源: {current_str}A, 電壓限制: {voltage_limit_str}V")
+                self.apply_voltage_source_settings()
+            elif function == "電流源":
+                self.apply_current_source_settings()
                 
             # 標記設定已應用
             self.settings_applied = True
             
             # 更新按鈕狀態
             self.update_button_states()
+            self.log_message("✅ 設定應用成功")
                 
         except Exception as e:
             QMessageBox.critical(self, "設定錯誤", f"應用設定時發生錯誤: {str(e)}")
-            self.log_message(f"設定錯誤: {e}")
+            self.log_message(f"❌ 設定錯誤: {e}")
+            
+    def apply_voltage_source_settings(self):
+        """應用電壓源設定"""
+        # 獲取電壓值
+        voltage_text = self.voltage_input.value_edit.text()
+        voltage_unit = self.voltage_input.get_current_prefix()
+        voltage_str = f"{voltage_text}{voltage_unit}" if voltage_unit else voltage_text
+        
+        # 獲取電流限制
+        current_limit_text = self.current_limit_input.value_edit.text()
+        current_limit_unit = self.current_limit_input.get_current_prefix()
+        current_limit_str = f"{current_limit_text}{current_limit_unit}" if current_limit_unit else current_limit_text
+        
+        # 設定範圍（如果不是自動）
+        voltage_range = self.voltage_range_combo.currentText()
+        if voltage_range != "自動":
+            range_value = voltage_range.replace("V", "")
+            self.keithley.send_command(f":SOUR:VOLT:RANG {range_value}")
+        else:
+            self.keithley.send_command(":SOUR:VOLT:RANG:AUTO ON")
+            
+        # 應用電壓源設定
+        self.keithley.set_voltage(voltage_str, current_limit=current_limit_str)
+        self.log_message(f"🔋 電壓源設定: {voltage_str}V, 限制: {current_limit_str}A, 範圍: {voltage_range}")
+        
+    def apply_current_source_settings(self):
+        """應用電流源設定"""
+        # 獲取電流值
+        current_text = self.current_input.value_edit.text()
+        current_unit = self.current_input.get_current_prefix()
+        current_str = f"{current_text}{current_unit}" if current_unit else current_text
+        
+        # 獲取電壓限制
+        voltage_limit_text = self.voltage_limit_input.value_edit.text()
+        voltage_limit_unit = self.voltage_limit_input.get_current_prefix()
+        voltage_limit_str = f"{voltage_limit_text}{voltage_limit_unit}" if voltage_limit_unit else voltage_limit_text
+        
+        # 設定範圍（如果不是自動）
+        current_range = self.current_range_combo.currentText()
+        if current_range != "自動":
+            range_value = current_range.replace("A", "").replace("mA", "m")
+            range_converted = self.keithley._convert_unit_format(range_value)
+            self.keithley.send_command(f":SOUR:CURR:RANG {range_converted}")
+        else:
+            self.keithley.send_command(":SOUR:CURR:RANG:AUTO ON")
+            
+        # 應用電流源設定
+        self.keithley.set_current(current_str, voltage_limit=voltage_limit_str)
+        self.log_message(f"⚡ 電流源設定: {current_str}A, 限制: {voltage_limit_str}V, 範圍: {current_range}")
     
     def toggle_output(self):
         """切換輸出狀態"""
@@ -536,6 +705,60 @@ class KeithleyControlWidget(QWidget):
         """處理測量錯誤"""
         self.log_message(f"測量錯誤: {error_message}")
         self.auto_measure_cb.setChecked(False)
+        
+    def start_execution(self):
+        """開始執行當前模式的完整操作流程"""
+        if not self.keithley or not self.keithley.connected:
+            QMessageBox.warning(self, "警告", "請先連接設備")
+            return
+            
+        if not self.settings_applied:
+            QMessageBox.warning(self, "警告", "請先應用設定")
+            return
+            
+        try:
+            function = self.function_combo.currentText()
+            self.log_message(f"▶️ 開始執行{function}操作...")
+            self.start_execution_btn.setEnabled(False)
+            self.start_execution_btn.setText("🔄 執行中...")
+            
+            # 先開啟輸出
+            self.keithley.output_on()
+            self.output_enabled = True
+            self.log_message("⚡ 輸出已開啟")
+            
+            # 等待穩定並測量
+            time.sleep(0.5)
+            voltage, current, resistance, power = self.keithley.measure_all()
+            
+            # 更新顯示
+            self.update_measurement_display(voltage, current, resistance, power)
+            
+            # 顯示結果
+            if function == "電壓源":
+                self.log_message(f"🔋 {function}執行結果:")
+                self.log_message(f"  輸出電壓: {voltage:.6f} V")
+                self.log_message(f"  測量電流: {current:.6f} A")
+            else:
+                self.log_message(f"⚡ {function}執行結果:")
+                self.log_message(f"  輸出電流: {current:.6f} A") 
+                self.log_message(f"  測量電壓: {voltage:.6f} V")
+                
+            self.log_message(f"  功率: {power:.6f} W")
+            
+            # 更新按鈕狀態
+            self.update_button_states()
+            self.log_message("✅ 執行完成！輸出保持開啟狀態")
+                
+        except Exception as e:
+            error_msg = f"執行失敗: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "執行錯誤", error_msg)
+            
+        finally:
+            self.start_execution_btn.setEnabled(True)
+            self.start_execution_btn.setText("▶️ 開始執行")
+    
     
     def save_data(self):
         """保存數據"""

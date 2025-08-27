@@ -590,3 +590,124 @@ class Keithley2461(SourceMeterBase):
         # 使用完整的 SCPI 命令格式
         response = self.query(":OUTP:STAT?")
         return bool(int(response))
+        
+    # =================
+    # 2400系列相容流程
+    # =================
+    
+    def run_2400_series_test(self, voltage_value: str = "10", current_limit: str = "10m") -> dict:
+        """
+        執行完整的2400系列測試流程
+        自動化步驟：重置 → 設定電壓源 → 設定參數 → 開啟輸出 → 測量 → 關閉輸出
+        
+        Args:
+            voltage_value: 電壓設定值（支援單位，如"10", "5V", "3.3"）
+            current_limit: 電流限制值（支援單位，如"10m", "100mA", "0.01"）
+            
+        Returns:
+            dict: 測試結果，包含測量值和執行狀態
+        """
+        if not self.connected:
+            raise ConnectionError("儀器未連接，無法執行2400系列測試")
+            
+        test_result = {
+            'success': False,
+            'steps': [],
+            'measurements': {},
+            'errors': []
+        }
+        
+        try:
+            # 步驟1: 重置儀器 (*RST)
+            self.logger.info("步驟1: 重置儀器 (*RST)")
+            self.reset()
+            test_result['steps'].append("✅ 重置儀器完成")
+            
+            # 步驟2: 設定為電壓源 (:SOUR:FUNC VOLT)
+            self.logger.info("步驟2: 設定電壓源功能")
+            self.set_source_function("VOLT")
+            test_result['steps'].append("✅ 設定電壓源功能完成")
+            
+            # 步驟3: 設定固定模式 (:SOUR:VOLT:MODE FIXED)
+            self.logger.info("步驟3: 設定固定電壓模式")
+            self.send_command(":SOUR:VOLT:MODE FIXED")
+            test_result['steps'].append("✅ 設定固定模式完成")
+            
+            # 步驟4: 設定電壓範圍 (:SOUR:VOLT:RANG 20)
+            self.logger.info("步驟4: 設定電壓範圍為20V")
+            self.send_command(":SOUR:VOLT:RANG 20")
+            test_result['steps'].append("✅ 設定電壓範圍完成")
+            
+            # 步驟5: 設定電壓電平 (:SOUR:VOLT:LEV)
+            self.logger.info(f"步驟5: 設定電壓電平 {voltage_value}")
+            voltage_converted = self._convert_unit_format(voltage_value)
+            self.send_command(f":SOUR:VOLT:LEV {voltage_converted}")
+            test_result['steps'].append(f"✅ 設定電壓電平 {voltage_value} 完成")
+            
+            # 步驟6: 設定電流保護/限制 (:SENS:CURR:PROT)
+            self.logger.info(f"步驟6: 設定電流保護 {current_limit}")
+            current_converted = self._convert_unit_format(current_limit)
+            self.send_command(f":SOUR:VOLT:ILIM {current_converted}")
+            test_result['steps'].append(f"✅ 設定電流限制 {current_limit} 完成")
+            
+            # 步驟7: 設定測量功能 (2461預設即支援，跳過)
+            self.logger.info("步驟7: 跳過測量功能設定 (2461預設支援電流測量)")
+            # self.send_command(':SENS:FUNC:ON "CURR"')  # 此命令2461不需要
+            test_result['steps'].append("✅ 測量功能使用預設值")
+            
+            # 步驟8: 設定電流測量範圍 (:SENS:CURR:RANG)
+            self.logger.info("步驟8: 設定電流測量範圍")
+            self.send_command(f":SENS:CURR:RANG {current_converted}")
+            test_result['steps'].append("✅ 設定電流測量範圍完成")
+            
+            # 步驟9: 設定數據格式 (2461使用預設即可，跳過)
+            self.logger.info("步驟9: 跳過數據格式設定 (2461預設支援)")
+            # self.send_command(":FORM:ELEM CURR")  # 此命令2461不支援
+            test_result['steps'].append("✅ 數據格式使用預設值")
+            
+            # 步驟10: 開啟輸出 (:OUTP ON)
+            self.logger.info("步驟10: 開啟輸出")
+            self.output_on()
+            test_result['steps'].append("✅ 開啟輸出完成")
+            
+            # 等待穩定
+            time.sleep(0.5)
+            
+            # 步驟11: 執行測量 (:READ?)
+            self.logger.info("步驟11: 執行測量")
+            voltage, current, resistance, power = self.measure_all()
+            test_result['measurements'] = {
+                'voltage': voltage,
+                'current': current, 
+                'resistance': resistance,
+                'power': power
+            }
+            test_result['steps'].append("✅ 測量完成")
+            
+            # 步驟12: 關閉輸出 (:OUTP OFF)
+            self.logger.info("步驟12: 關閉輸出")
+            self.output_off()
+            test_result['steps'].append("✅ 關閉輸出完成")
+            
+            # 檢查是否有錯誤
+            errors = self.check_errors()
+            if errors:
+                test_result['errors'] = errors
+                self.logger.warning(f"2400流程執行完成但有錯誤: {errors}")
+            else:
+                test_result['success'] = True
+                self.logger.info("2400系列測試流程成功完成")
+            
+        except Exception as e:
+            error_msg = f"2400流程執行失敗: {str(e)}"
+            self.logger.error(error_msg)
+            test_result['errors'].append(error_msg)
+            
+            # 確保輸出關閉
+            try:
+                self.output_off()
+                test_result['steps'].append("⚠️ 安全關閉輸出")
+            except:
+                pass
+                
+        return test_result
