@@ -27,7 +27,7 @@ from widgets.unit_input_widget import UnitInputWidget, UnitDisplayWidget
 
 class SweepMeasurementWorker(QThread):
     """掃描測量工作執行緒"""
-    data_point_ready = pyqtSignal(float, float, float, int)  # voltage, current, resistance, point_number
+    data_point_ready = pyqtSignal(float, float, float, float, int)  # voltage, current, resistance, power, point_number
     sweep_completed = pyqtSignal()
     sweep_progress = pyqtSignal(int)  # percentage
     error_occurred = pyqtSignal(str)
@@ -69,8 +69,8 @@ class SweepMeasurementWorker(QThread):
                 # 測量
                 v, i, r, p = self.keithley.measure_all()
                 
-                # 發送數據點
-                self.data_point_ready.emit(v, i, r, i+1)
+                # 發送數據點 (包含儀器計算的功率值)
+                self.data_point_ready.emit(v, i, r, p, i+1)
                 
                 # 更新進度
                 progress = int((i + 1) * 100 / total_points)
@@ -536,23 +536,37 @@ class ProfessionalKeithleyWidget(QWidget):
         chart_control.addWidget(QLabel("圖表類型:"))
         
         self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItems(["IV特性曲線", "時間序列", "功率曲線"])
+        self.chart_type_combo.addItems(["IV特性曲線", "電壓時間序列", "電流時間序列", "功率曲線"])
         self.chart_type_combo.currentTextChanged.connect(self.update_chart_display)
         chart_control.addWidget(self.chart_type_combo)
         
         chart_control.addStretch()
         layout.addLayout(chart_control)
         
-        # 圖表顯示區域
-        self.plot_widget = PlotWidget()
-        self.plot_widget.setBackground('w')
-        self.plot_widget.showGrid(True, True)
-        self.plot_widget.addLegend()
+        # 使用分割器創建雙圖表顯示
+        chart_splitter = QSplitter(Qt.Orientation.Vertical)
+        
+        # 上方圖表 - 主要顯示
+        self.main_plot_widget = PlotWidget()
+        self.main_plot_widget.setBackground('w')
+        self.main_plot_widget.showGrid(True, True)
+        self.main_plot_widget.addLegend()
+        chart_splitter.addWidget(self.main_plot_widget)
+        
+        # 下方圖表 - 輔助顯示
+        self.aux_plot_widget = PlotWidget()
+        self.aux_plot_widget.setBackground('w')
+        self.aux_plot_widget.showGrid(True, True)
+        self.aux_plot_widget.addLegend()
+        chart_splitter.addWidget(self.aux_plot_widget)
+        
+        # 設定分割比例 (7:3)
+        chart_splitter.setSizes([700, 300])
+        
+        layout.addWidget(chart_splitter)
         
         # 設置初始圖表
-        self.setup_iv_chart()
-        
-        layout.addWidget(self.plot_widget)
+        self.setup_chart_system()
         
         return tab_widget
         
@@ -633,63 +647,132 @@ class ProfessionalKeithleyWidget(QWidget):
                 
         self.update_chart_display()
         
+    def setup_chart_system(self):
+        """初始化圖表系統"""
+        self.update_chart_display()
+        
     def update_chart_display(self):
         """更新圖表顯示"""
         chart_type = self.chart_type_combo.currentText()
         
         if chart_type == "IV特性曲線":
             self.setup_iv_chart()
-        elif chart_type == "時間序列":
-            self.setup_time_series_chart()
+        elif chart_type == "電壓時間序列":
+            self.setup_voltage_time_series()
+        elif chart_type == "電流時間序列":  
+            self.setup_current_time_series()
         else:
             self.setup_power_chart()
             
     def setup_iv_chart(self):
-        """設置IV特性曲線"""
-        self.plot_widget.clear()
-        self.plot_widget.setLabel('left', '電流 (A)')
-        self.plot_widget.setLabel('bottom', '電壓 (V)')
-        self.plot_widget.setTitle('IV特性曲線')
+        """設置IV特性曲線 - 修復版本"""
+        # 清空兩個圖表
+        self.main_plot_widget.clear()
+        self.aux_plot_widget.clear()
         
-        # 創建曲線
-        self.iv_curve = self.plot_widget.plot(
-            pen=pg.mkPen(color='#e74c3c', width=2),
+        # 主圖表：IV特性曲線
+        self.main_plot_widget.setLabel('left', '電流 (A)')
+        self.main_plot_widget.setLabel('bottom', '電壓 (V)')  
+        self.main_plot_widget.setTitle('IV特性曲線')
+        
+        # 輔助圖表：功率曲線
+        self.aux_plot_widget.setLabel('left', '功率 (W)')
+        self.aux_plot_widget.setLabel('bottom', '電壓 (V)')
+        self.aux_plot_widget.setTitle('功率特性曲線')
+        
+        # 創建曲線對象
+        self.iv_curve = self.main_plot_widget.plot(
+            pen=pg.mkPen(color='#e74c3c', width=3),
             symbol='o',
-            symbolSize=5,
+            symbolSize=6,
             symbolBrush='#e74c3c',
             name='I-V曲線'
         )
         
-    def setup_time_series_chart(self):
-        """設置時間序列圖表"""
-        self.plot_widget.clear()
-        self.plot_widget.setLabel('left', '數值')
-        self.plot_widget.setLabel('bottom', '時間 (s)')
-        self.plot_widget.setTitle('時間序列')
-        
-        # 創建多條曲線
-        self.voltage_curve = self.plot_widget.plot(
-            pen=pg.mkPen(color='#3498db', width=2),
-            name='電壓 (V)'
+        self.power_curve = self.aux_plot_widget.plot(
+            pen=pg.mkPen(color='#f39c12', width=3),
+            symbol='s', 
+            symbolSize=5,
+            symbolBrush='#f39c12',
+            name='P-V曲線'
         )
-        self.current_curve = self.plot_widget.plot(
+        
+    def setup_voltage_time_series(self):
+        """設置電壓時間序列"""
+        self.main_plot_widget.clear()
+        self.aux_plot_widget.clear()
+        
+        # 主圖表：電壓時間序列
+        self.main_plot_widget.setLabel('left', '電壓 (V)')
+        self.main_plot_widget.setLabel('bottom', '時間 (s)')
+        self.main_plot_widget.setTitle('電壓時間序列')
+        
+        # 輔助圖表：電阻時間序列
+        self.aux_plot_widget.setLabel('left', '電阻 (Ω)')
+        self.aux_plot_widget.setLabel('bottom', '時間 (s)')
+        self.aux_plot_widget.setTitle('電阻時間序列')
+        
+        self.voltage_time_curve = self.main_plot_widget.plot(
+            pen=pg.mkPen(color='#3498db', width=2),
+            name='電壓'
+        )
+        
+        self.resistance_time_curve = self.aux_plot_widget.plot(
+            pen=pg.mkPen(color='#27ae60', width=2),
+            name='電阻'
+        )
+        
+    def setup_current_time_series(self):
+        """設置電流時間序列"""
+        self.main_plot_widget.clear()
+        self.aux_plot_widget.clear()
+        
+        # 主圖表：電流時間序列
+        self.main_plot_widget.setLabel('left', '電流 (A)')
+        self.main_plot_widget.setLabel('bottom', '時間 (s)')
+        self.main_plot_widget.setTitle('電流時間序列')
+        
+        # 輔助圖表：功率時間序列  
+        self.aux_plot_widget.setLabel('left', '功率 (W)')
+        self.aux_plot_widget.setLabel('bottom', '時間 (s)')
+        self.aux_plot_widget.setTitle('功率時間序列')
+        
+        self.current_time_curve = self.main_plot_widget.plot(
             pen=pg.mkPen(color='#e74c3c', width=2),
-            name='電流 (A)'
+            name='電流'
+        )
+        
+        self.power_time_curve = self.aux_plot_widget.plot(
+            pen=pg.mkPen(color='#f39c12', width=2),
+            name='功率'
         )
         
     def setup_power_chart(self):
         """設置功率曲線"""
-        self.plot_widget.clear()
-        self.plot_widget.setLabel('left', '功率 (W)')
-        self.plot_widget.setLabel('bottom', '電壓 (V)')
-        self.plot_widget.setTitle('功率特性曲線')
+        self.main_plot_widget.clear()
+        self.aux_plot_widget.clear()
         
-        self.power_curve = self.plot_widget.plot(
-            pen=pg.mkPen(color='#f39c12', width=2),
+        # 主圖表：功率-電壓曲線
+        self.main_plot_widget.setLabel('left', '功率 (W)')
+        self.main_plot_widget.setLabel('bottom', '電壓 (V)')
+        self.main_plot_widget.setTitle('功率特性曲線')
+        
+        # 輔助圖表：效率曲線（功率密度）
+        self.aux_plot_widget.setLabel('left', '功率密度 (W/V)')
+        self.aux_plot_widget.setLabel('bottom', '電壓 (V)')
+        self.aux_plot_widget.setTitle('功率密度曲線')
+        
+        self.power_voltage_curve = self.main_plot_widget.plot(
+            pen=pg.mkPen(color='#f39c12', width=3),
             symbol='s',
-            symbolSize=4,
-            symbolBrush='#f39c12',
+            symbolSize=5,
+            symbolBrush='#f39c12', 
             name='P-V曲線'
+        )
+        
+        self.power_density_curve = self.aux_plot_widget.plot(
+            pen=pg.mkPen(color='#9b59b6', width=2),
+            name='功率密度'
         )
 
     # ==================== 核心功能方法 ====================
@@ -955,9 +1038,9 @@ class ProfessionalKeithleyWidget(QWidget):
     
     # ==================== 數據更新方法 ====================
     
-    def update_iv_data(self, voltage, current, resistance, point_num):
-        """更新IV數據"""
-        power = voltage * current
+    def update_iv_data(self, voltage, current, resistance, power, point_num):
+        """更新IV數據 (使用儀器計算的功率值)"""
+        # power 參數現在來自儀器的 SCPI 計算，不再本地重新計算
         
         # 存儲數據
         self.iv_data.append((voltage, current, resistance, power))
