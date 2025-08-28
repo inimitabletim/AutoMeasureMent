@@ -475,7 +475,7 @@ class ProfessionalKeithleyWidget(QWidget):
         display_splitter.addWidget(self.display_tabs)
         
         # 設定上下分割比例為 5:5
-        display_splitter.setSizes([500, 500])
+        display_splitter.setSizes([250, 750])
         
         layout.addWidget(display_splitter)
         
@@ -531,10 +531,10 @@ class ProfessionalKeithleyWidget(QWidget):
         unit_a.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px;")
         values_layout.addWidget(unit_a, 0, 5)
         
-        # 功率顯示 - 專業級樣式
+        # 功率顯示 - 專業級樣式 (移至第一排)
         power_label = QLabel("功率:")
         power_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
-        values_layout.addWidget(power_label, 1, 0)
+        values_layout.addWidget(power_label, 0, 6)
         self.power_display = QLCDNumber(10)  # 增加數字位數
         self.power_display.setStyleSheet("""
             QLCDNumber { 
@@ -546,15 +546,15 @@ class ProfessionalKeithleyWidget(QWidget):
                 min-height: 50px;
             }
         """)
-        values_layout.addWidget(self.power_display, 1, 1)
+        values_layout.addWidget(self.power_display, 0, 7)
         unit_w = QLabel("W")
         unit_w.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px;")
-        values_layout.addWidget(unit_w, 1, 2)
+        values_layout.addWidget(unit_w, 0, 8)
         
-        # 電阻顯示 - 專業級樣式
+        # 電阻顯示 - 專業級樣式 (移至第一排)
         resistance_label = QLabel("電阻:")
         resistance_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
-        values_layout.addWidget(resistance_label, 1, 3)
+        values_layout.addWidget(resistance_label, 0, 9)
         self.resistance_display = QLCDNumber(10)  # 增加數字位數
         self.resistance_display.setStyleSheet("""
             QLCDNumber { 
@@ -566,23 +566,21 @@ class ProfessionalKeithleyWidget(QWidget):
                 min-height: 50px;
             }
         """)
-        values_layout.addWidget(self.resistance_display, 1, 4)
+        values_layout.addWidget(self.resistance_display, 0, 10)
         unit_ohm = QLabel("Ω")
         unit_ohm.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
-        values_layout.addWidget(unit_ohm, 1, 5)
+        values_layout.addWidget(unit_ohm, 0, 11)
         
-        layout.addLayout(values_layout)
-        
-        # 狀態信息
-        status_layout = QVBoxLayout()
+        # 狀態信息 - 整合到第二排
         self.measurement_status = QLabel("⏸️ 待機中")
-        self.measurement_status.setStyleSheet("font-weight: bold; font-size: 14px;")
-        status_layout.addWidget(self.measurement_status)
+        self.measurement_status.setStyleSheet("font-weight: bold; font-size: 16px; color: #34495e;")
+        values_layout.addWidget(self.measurement_status, 1, 0, 1, 6)  # 跨越6列
         
         self.data_points_label = QLabel("數據點: 0")
-        status_layout.addWidget(self.data_points_label)
+        self.data_points_label.setStyleSheet("font-weight: bold; font-size: 16px; color: #7f8c8d;")
+        values_layout.addWidget(self.data_points_label, 1, 6, 1, 6)  # 跨越剩餘6列
         
-        layout.addLayout(status_layout)
+        layout.addLayout(values_layout)
         
         return frame
         
