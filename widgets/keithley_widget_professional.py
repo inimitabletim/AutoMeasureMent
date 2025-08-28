@@ -446,15 +446,18 @@ class ProfessionalKeithleyWidget(QWidget):
         self.source_params_layout.addWidget(group)
         
     def create_display_panel(self):
-        """創建右側顯示面板"""
+        """創建右側顯示面板 - 數據與圖表 5:5 分割"""
         display_widget = QWidget()
         layout = QVBoxLayout(display_widget)
         
-        # 頂部狀態欄
-        status_frame = self.create_status_bar()
-        layout.addWidget(status_frame)
+        # 使用分割器實現數據顯示與圖表的 5:5 分割
+        display_splitter = QSplitter(Qt.Orientation.Vertical)
         
-        # 中間顯示區域 - 使用分頁
+        # 上半部 (50%) - 數據顯示區域
+        data_display_frame = self.create_status_bar()
+        display_splitter.addWidget(data_display_frame)
+        
+        # 下半部 (50%) - 圖表顯示區域
         self.display_tabs = QTabWidget()
         
         # 圖表分頁
@@ -469,15 +472,20 @@ class ProfessionalKeithleyWidget(QWidget):
         log_tab = self.create_log_tab()
         self.display_tabs.addTab(log_tab, "📝 操作日誌")
         
-        layout.addWidget(self.display_tabs)
+        display_splitter.addWidget(self.display_tabs)
+        
+        # 設定上下分割比例為 5:5
+        display_splitter.setSizes([500, 500])
+        
+        layout.addWidget(display_splitter)
         
         return display_widget
         
     def create_status_bar(self):
-        """創建狀態欄"""
+        """創建數據顯示區域（原狀態欄）"""
         frame = QFrame()
         frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        frame.setMaximumHeight(80)
+        # 移除固定高度限制，讓它使用分配的空間
         layout = QHBoxLayout(frame)
         
         # 實時數值顯示
@@ -595,25 +603,25 @@ class ProfessionalKeithleyWidget(QWidget):
         chart_control.addStretch()
         layout.addLayout(chart_control)
         
-        # 使用分割器創建雙圖表顯示
-        chart_splitter = QSplitter(Qt.Orientation.Vertical)
+        # 使用分割器創建左右並排圖表顯示
+        chart_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        # 上方圖表 - 主要顯示
+        # 左側圖表 - 主要顯示
         self.main_plot_widget = PlotWidget()
         self.main_plot_widget.setBackground('w')
         self.main_plot_widget.showGrid(True, True)
         self.main_plot_widget.addLegend()
         chart_splitter.addWidget(self.main_plot_widget)
         
-        # 下方圖表 - 輔助顯示
+        # 右側圖表 - 輔助顯示
         self.aux_plot_widget = PlotWidget()
         self.aux_plot_widget.setBackground('w')
         self.aux_plot_widget.showGrid(True, True)
         self.aux_plot_widget.addLegend()
         chart_splitter.addWidget(self.aux_plot_widget)
         
-        # 設定專業比例 (8:2 黃金比例)
-        chart_splitter.setSizes([800, 200])
+        # 設定左右圖表比例 (1:1 平均分配)
+        chart_splitter.setSizes([500, 500])
         
         layout.addWidget(chart_splitter)
         
