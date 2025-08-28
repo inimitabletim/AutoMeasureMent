@@ -645,8 +645,37 @@ class ProfessionalKeithleyWidget(QWidget):
             else:
                 self.log_message("⏱️ 切換到時間序列模式")
                 
+        # 智慧圖表配合
+        self.auto_select_optimal_chart(mode_text)
         self.update_chart_display()
         
+    def auto_select_optimal_chart(self, mode_text):
+        """根據測量模式自動選擇最佳圖表"""
+        chart_mapping = {
+            "IV特性掃描": {
+                "primary": "IV特性曲線",
+                "reason": "IV掃描適合觀察電流-電壓特性和尋找特徵點（如導通點、崩潰點）"
+            },
+            "連續監控": {
+                "primary": "電壓時間序列", 
+                "reason": "連續監控適合觀察電壓隨時間的穩定性和漂移趨勢"
+            },
+            "時間序列": {
+                "primary": "電流時間序列",
+                "reason": "時間序列模式適合分析電流動態變化和響應特性"
+            }
+        }
+        
+        config = chart_mapping.get(mode_text)
+        if config:
+            current_chart = self.chart_type_combo.currentText()
+            optimal_chart = config["primary"]
+            
+            # 只有在當前圖表不是最佳選擇時才切換
+            if current_chart != optimal_chart:
+                self.chart_type_combo.setCurrentText(optimal_chart)
+                self.log_message(f"📊 智慧選擇「{optimal_chart}」圖表 - {config['reason']}")
+    
     def setup_chart_system(self):
         """初始化圖表系統"""
         self.update_chart_display()
@@ -1085,13 +1114,28 @@ class ProfessionalKeithleyWidget(QWidget):
         self.power_display.display(f"{power:.6f}")
         
         # 更新時間序列圖表
-        if self.chart_type_combo.currentText() == "時間序列":
+        chart_type = self.chart_type_combo.currentText()
+        if chart_type in ["電壓時間序列", "電流時間序列", "時間序列"]:
             times = [data[0] for data in self.time_series_data[-100:]]  # 只顯示最近100個點
             voltages = [data[1] for data in self.time_series_data[-100:]]
             currents = [data[2] for data in self.time_series_data[-100:]]
+            resistances = [data[3] for data in self.time_series_data[-100:]]
+            powers = [data[4] for data in self.time_series_data[-100:]]
             
-            self.voltage_curve.setData(times, voltages)
-            self.current_curve.setData(times, currents)
+            # 根據圖表類型更新對應的曲線
+            if chart_type == "電壓時間序列" and hasattr(self, 'voltage_time_curve'):
+                self.voltage_time_curve.setData(times, voltages)
+                if hasattr(self, 'resistance_time_curve'):
+                    self.resistance_time_curve.setData(times, resistances)
+            elif chart_type == "電流時間序列" and hasattr(self, 'current_time_curve'):
+                self.current_time_curve.setData(times, currents)
+                if hasattr(self, 'power_time_curve'):
+                    self.power_time_curve.setData(times, powers)
+            elif chart_type == "時間序列" and hasattr(self, 'voltage_curve'):
+                # 舊版相容性
+                self.voltage_curve.setData(times, voltages)
+                if hasattr(self, 'current_curve'):
+                    self.current_curve.setData(times, currents)
         
         # 更新數據表 (每5個點添加一次，避免表格過度增長)
         if len(self.time_series_data) % 5 == 0:
