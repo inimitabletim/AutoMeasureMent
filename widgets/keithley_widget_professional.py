@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                             QComboBox, QDoubleSpinBox, QCheckBox, QTextEdit,
                             QMessageBox, QProgressBar, QSplitter, QTabWidget,
                             QTableWidget, QTableWidgetItem, QHeaderView,
-                            QFrame, QLCDNumber)
+                            QFrame, QLCDNumber, QSizePolicy)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
 import pyqtgraph as pg
@@ -475,21 +475,19 @@ class ProfessionalKeithleyWidget(QWidget):
         display_splitter.addWidget(self.display_tabs)
         
         # 設定上下分割比例為 5:5
-        display_splitter.setSizes([250, 750])
+        display_splitter.setSizes([200, 800])
         
         layout.addWidget(display_splitter)
         
         return display_widget
         
     def create_status_bar(self):
-        """創建數據顯示區域（原狀態欄）"""
-        frame = QFrame()
-        frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        # 移除固定高度限制，讓它使用分配的空間
-        layout = QHBoxLayout(frame)
+        """創建數據顯示區域（原狀態欄）- 簡化嵌套結構"""
+        # 直接創建包含 LCD 的 Widget，減少嵌套層次
+        status_widget = QWidget()
         
-        # 實時數值顯示
-        values_layout = QGridLayout()
+        # 實時數值顯示 - 直接使用 QGridLayout 作為主佈局
+        values_layout = QGridLayout(status_widget)
         
         # 電壓顯示 - 專業級樣式
         voltage_label = QLabel("電壓:")
@@ -502,8 +500,6 @@ class ProfessionalKeithleyWidget(QWidget):
                 background-color: #34495e;
                 border: 2px solid #2980b9;
                 border-radius: 5px;
-                font-size: 16px;
-                min-height: 50px;
             }
         """)
         values_layout.addWidget(self.voltage_display, 0, 1)
@@ -522,8 +518,6 @@ class ProfessionalKeithleyWidget(QWidget):
                 background-color: #34495e;
                 border: 2px solid #e74c3c;
                 border-radius: 5px;
-                font-size: 16px;
-                min-height: 50px;
             }
         """)
         values_layout.addWidget(self.current_display, 0, 4)
@@ -542,8 +536,6 @@ class ProfessionalKeithleyWidget(QWidget):
                 background-color: #34495e;
                 border: 2px solid #f39c12;
                 border-radius: 5px;
-                font-size: 16px;
-                min-height: 50px;
             }
         """)
         values_layout.addWidget(self.power_display, 0, 7)
@@ -562,14 +554,25 @@ class ProfessionalKeithleyWidget(QWidget):
                 background-color: #34495e;
                 border: 2px solid #27ae60;
                 border-radius: 5px;
-                font-size: 16px;
-                min-height: 50px;
             }
         """)
         values_layout.addWidget(self.resistance_display, 0, 10)
         unit_ohm = QLabel("Ω")
         unit_ohm.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
         values_layout.addWidget(unit_ohm, 0, 11)
+        
+        # 設置 QGridLayout 的拉伸係數，讓 LCD 顯示器能夠響應式縮放
+        # 為 LCD 顯示器所在的列設置拉伸係數
+        values_layout.setColumnStretch(1, 2)   # 電壓 LCD 列
+        values_layout.setColumnStretch(4, 2)   # 電流 LCD 列  
+        values_layout.setColumnStretch(7, 2)   # 功率 LCD 列
+        values_layout.setColumnStretch(10, 2)  # 電阻 LCD 列
+        
+        # 設置 QLCDNumber 的尺寸政策為擴展
+        self.voltage_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.current_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.power_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.resistance_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
         # 狀態信息 - 整合到第二排
         self.measurement_status = QLabel("⏸️ 待機中")
@@ -580,9 +583,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.data_points_label.setStyleSheet("font-weight: bold; font-size: 16px; color: #7f8c8d;")
         values_layout.addWidget(self.data_points_label, 1, 6, 1, 6)  # 跨越剩餘6列
         
-        layout.addLayout(values_layout)
-        
-        return frame
+        return status_widget
         
     def create_chart_tab(self):
         """創建圖表分頁"""
