@@ -483,33 +483,85 @@ class ProfessionalKeithleyWidget(QWidget):
         # 實時數值顯示
         values_layout = QGridLayout()
         
-        # 電壓顯示
-        values_layout.addWidget(QLabel("電壓:"), 0, 0)
-        self.voltage_display = QLCDNumber(8)
-        self.voltage_display.setStyleSheet("QLCDNumber { color: #3498db; }")
+        # 電壓顯示 - 專業級樣式
+        voltage_label = QLabel("電壓:")
+        voltage_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        values_layout.addWidget(voltage_label, 0, 0)
+        self.voltage_display = QLCDNumber(10)  # 增加數字位數
+        self.voltage_display.setStyleSheet("""
+            QLCDNumber { 
+                color: #2980b9; 
+                background-color: #34495e;
+                border: 2px solid #2980b9;
+                border-radius: 5px;
+                font-size: 16px;
+                min-height: 50px;
+            }
+        """)
         values_layout.addWidget(self.voltage_display, 0, 1)
-        values_layout.addWidget(QLabel("V"), 0, 2)
+        unit_v = QLabel("V")
+        unit_v.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px;")
+        values_layout.addWidget(unit_v, 0, 2)
         
-        # 電流顯示
-        values_layout.addWidget(QLabel("電流:"), 0, 3)
-        self.current_display = QLCDNumber(8)  
-        self.current_display.setStyleSheet("QLCDNumber { color: #e74c3c; }")
+        # 電流顯示 - 專業級樣式
+        current_label = QLabel("電流:")
+        current_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        values_layout.addWidget(current_label, 0, 3)
+        self.current_display = QLCDNumber(10)  # 增加數字位數
+        self.current_display.setStyleSheet("""
+            QLCDNumber { 
+                color: #e74c3c; 
+                background-color: #34495e;
+                border: 2px solid #e74c3c;
+                border-radius: 5px;
+                font-size: 16px;
+                min-height: 50px;
+            }
+        """)
         values_layout.addWidget(self.current_display, 0, 4)
-        values_layout.addWidget(QLabel("A"), 0, 5)
+        unit_a = QLabel("A")
+        unit_a.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px;")
+        values_layout.addWidget(unit_a, 0, 5)
         
-        # 功率顯示
-        values_layout.addWidget(QLabel("功率:"), 1, 0)
-        self.power_display = QLCDNumber(8)
-        self.power_display.setStyleSheet("QLCDNumber { color: #f39c12; }")
+        # 功率顯示 - 專業級樣式
+        power_label = QLabel("功率:")
+        power_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        values_layout.addWidget(power_label, 1, 0)
+        self.power_display = QLCDNumber(10)  # 增加數字位數
+        self.power_display.setStyleSheet("""
+            QLCDNumber { 
+                color: #f39c12; 
+                background-color: #34495e;
+                border: 2px solid #f39c12;
+                border-radius: 5px;
+                font-size: 16px;
+                min-height: 50px;
+            }
+        """)
         values_layout.addWidget(self.power_display, 1, 1)
-        values_layout.addWidget(QLabel("W"), 1, 2)
+        unit_w = QLabel("W")
+        unit_w.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px;")
+        values_layout.addWidget(unit_w, 1, 2)
         
-        # 電阻顯示
-        values_layout.addWidget(QLabel("電阻:"), 1, 3)
-        self.resistance_display = QLCDNumber(8)
-        self.resistance_display.setStyleSheet("QLCDNumber { color: #27ae60; }")
+        # 電阻顯示 - 專業級樣式
+        resistance_label = QLabel("電阻:")
+        resistance_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        values_layout.addWidget(resistance_label, 1, 3)
+        self.resistance_display = QLCDNumber(10)  # 增加數字位數
+        self.resistance_display.setStyleSheet("""
+            QLCDNumber { 
+                color: #27ae60; 
+                background-color: #34495e;
+                border: 2px solid #27ae60;
+                border-radius: 5px;
+                font-size: 16px;
+                min-height: 50px;
+            }
+        """)
         values_layout.addWidget(self.resistance_display, 1, 4)
-        values_layout.addWidget(QLabel("Ω"), 1, 5)
+        unit_ohm = QLabel("Ω")
+        unit_ohm.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
+        values_layout.addWidget(unit_ohm, 1, 5)
         
         layout.addLayout(values_layout)
         
@@ -560,8 +612,8 @@ class ProfessionalKeithleyWidget(QWidget):
         self.aux_plot_widget.addLegend()
         chart_splitter.addWidget(self.aux_plot_widget)
         
-        # 設定分割比例 (7:3)
-        chart_splitter.setSizes([700, 300])
+        # 設定專業比例 (8:2 黃金比例)
+        chart_splitter.setSizes([800, 200])
         
         layout.addWidget(chart_splitter)
         
@@ -699,22 +751,31 @@ class ProfessionalKeithleyWidget(QWidget):
         self.main_plot_widget.clear()
         self.aux_plot_widget.clear()
         
-        # 主圖表：IV特性曲線
-        self.main_plot_widget.setLabel('left', '電流 (A)')
-        self.main_plot_widget.setLabel('bottom', '電壓 (V)')  
-        self.main_plot_widget.setTitle('IV特性曲線')
+        # 主圖表：IV特性曲線 - 專業級設定
+        self.main_plot_widget.setLabel('left', '電流 (A)', **{'font-size': '12pt', 'font-weight': 'bold'})
+        self.main_plot_widget.setLabel('bottom', '電壓 (V)', **{'font-size': '12pt', 'font-weight': 'bold'})  
+        self.main_plot_widget.setTitle('IV特性曲線', **{'font-size': '14pt', 'font-weight': 'bold'})
         
-        # 輔助圖表：功率曲線
-        self.aux_plot_widget.setLabel('left', '功率 (W)')
-        self.aux_plot_widget.setLabel('bottom', '電壓 (V)')
-        self.aux_plot_widget.setTitle('功率特性曲線')
+        # 設定主圖表網格樣式
+        self.main_plot_widget.getAxis('left').setPen(pg.mkPen('#34495e', width=2))
+        self.main_plot_widget.getAxis('bottom').setPen(pg.mkPen('#34495e', width=2))
         
-        # 創建曲線對象
+        # 輔助圖表：功率曲線 - 專業級設定
+        self.aux_plot_widget.setLabel('left', '功率 (W)', **{'font-size': '10pt', 'font-weight': 'bold'})
+        self.aux_plot_widget.setLabel('bottom', '電壓 (V)', **{'font-size': '10pt', 'font-weight': 'bold'})
+        self.aux_plot_widget.setTitle('功率特性曲線', **{'font-size': '12pt', 'font-weight': 'bold'})
+        
+        # 設定輔助圖表網格樣式
+        self.aux_plot_widget.getAxis('left').setPen(pg.mkPen('#7f8c8d', width=1))
+        self.aux_plot_widget.getAxis('bottom').setPen(pg.mkPen('#7f8c8d', width=1))
+        
+        # 創建主要曲線對象 - 增強視覺效果
         self.iv_curve = self.main_plot_widget.plot(
-            pen=pg.mkPen(color='#e74c3c', width=3),
+            pen=pg.mkPen(color='#e74c3c', width=4),  # 增加線條粗細
             symbol='o',
-            symbolSize=6,
+            symbolSize=8,  # 增大符號
             symbolBrush='#e74c3c',
+            symbolPen=pg.mkPen('#c0392b', width=2),
             name='I-V曲線'
         )
         
