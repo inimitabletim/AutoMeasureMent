@@ -482,12 +482,34 @@ class ProfessionalKeithleyWidget(QWidget):
         return display_widget
         
     def create_status_bar(self):
-        """創建數據顯示區域（原狀態欄）- 簡化嵌套結構"""
-        # 直接創建包含 LCD 的 Widget，減少嵌套層次
+        """創建數據顯示區域 - 使用 GroupBox 統一容器設計"""
+        # 創建主容器
         status_widget = QWidget()
+        main_layout = QVBoxLayout(status_widget)
+        main_layout.setContentsMargins(5, 5, 5, 5)
         
-        # 實時數值顯示 - 直接使用 QGridLayout 作為主佈局
-        values_layout = QGridLayout(status_widget)
+        # 創建實時數據顯示 GroupBox
+        data_group = QGroupBox("📊 實時數據顯示")
+        data_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                color: #2c3e50;
+                border: 2px solid #95a5a6;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                background-color: white;
+            }
+        """)
+        
+        # 實時數值顯示 - 使用 QGridLayout
+        values_layout = QGridLayout(data_group)
         
         # 電壓顯示 - 專業級樣式
         voltage_label = QLabel("電壓:")
@@ -618,8 +640,11 @@ class ProfessionalKeithleyWidget(QWidget):
         status_layout.addWidget(separator)
         status_layout.addWidget(self.data_points_label, 1)
         
-        # 將狀態容器添加到主佈局
+        # 將狀態容器添加到 GroupBox 佈局
         values_layout.addWidget(status_container, 1, 0, 1, 12)  # 跨越所有列
+        
+        # 將 GroupBox 添加到主佈局
+        main_layout.addWidget(data_group)
         
         return status_widget
     
