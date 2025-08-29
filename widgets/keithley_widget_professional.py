@@ -490,23 +490,8 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 創建實時數據顯示 GroupBox
         data_group = QGroupBox("📊 實時數據顯示")
-        data_group.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                font-size: 14px;
-                color: #2c3e50;
-                border: 2px solid #95a5a6;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                background-color: white;
-            }
-        """)
+        # 不設定特殊樣式，使用與左側 GroupBox 一致的預設主題樣式
+        # data_group 將自動繼承應用程式的深色主題
         
         # 實時數值顯示 - 使用 QGridLayout
         values_layout = QGridLayout(data_group)
