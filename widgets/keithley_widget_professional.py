@@ -568,16 +568,154 @@ class ProfessionalKeithleyWidget(QWidget):
         values_layout.setColumnStretch(7, 2)   # 功率 LCD 列
         values_layout.setColumnStretch(10, 2)  # 電阻 LCD 列
         
-        # 狀態信息 - 整合到第二排
-        self.measurement_status = QLabel("⏸️ 待機中")
-        self.measurement_status.setStyleSheet("font-weight: bold; font-size: 16px; color: #34495e;")
-        values_layout.addWidget(self.measurement_status, 1, 0, 1, 6)  # 跨越6列
+        # 狀態信息 - 使用專業的居中顯示設計
+        # 創建狀態容器以實現更好的控制
+        status_container = QWidget()
+        status_layout = QHBoxLayout(status_container)
+        status_layout.setContentsMargins(10, 5, 10, 5)
         
+        # 測量狀態 - 居中對齊，響應式字體，更醒目的顏色
+        self.measurement_status = QLabel("⏸️ 待機中")
+        self.measurement_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.measurement_status.setStyleSheet("""
+            QLabel {
+                font-weight: bold;
+                font-size: 18px;
+                color: #2c3e50;
+                background-color: #ecf0f1;
+                border: 2px solid #95a5a6;
+                border-radius: 8px;
+                padding: 8px 15px;
+                min-height: 25px;
+            }
+        """)
+        self.measurement_status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        
+        # 分隔符
+        separator = QLabel("|")
+        separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        separator.setStyleSheet("color: #95a5a6; font-size: 20px; font-weight: bold;")
+        
+        # 數據點顯示 - 居中對齊，響應式字體，更醒目的顏色
         self.data_points_label = QLabel("數據點: 0")
-        self.data_points_label.setStyleSheet("font-weight: bold; font-size: 16px; color: #7f8c8d;")
-        values_layout.addWidget(self.data_points_label, 1, 6, 1, 6)  # 跨越剩餘6列
+        self.data_points_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_points_label.setStyleSheet("""
+            QLabel {
+                font-weight: bold;
+                font-size: 18px;
+                color: #27ae60;
+                background-color: #e8f6f3;
+                border: 2px solid #27ae60;
+                border-radius: 8px;
+                padding: 8px 15px;
+                min-height: 25px;
+            }
+        """)
+        self.data_points_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        
+        # 添加到水平佈局
+        status_layout.addWidget(self.measurement_status, 1)
+        status_layout.addWidget(separator)
+        status_layout.addWidget(self.data_points_label, 1)
+        
+        # 將狀態容器添加到主佈局
+        values_layout.addWidget(status_container, 1, 0, 1, 12)  # 跨越所有列
         
         return status_widget
+    
+    def update_status_style(self, status_type='idle'):
+        """
+        更新測量狀態的樣式
+        Args:
+            status_type: 'idle', 'running', 'completed', 'error'
+        """
+        style_configs = {
+            'idle': {
+                'color': '#2c3e50',
+                'bg_color': '#ecf0f1',
+                'border_color': '#95a5a6'
+            },
+            'running': {
+                'color': '#e67e22',
+                'bg_color': '#fdf2e9',
+                'border_color': '#e67e22'
+            },
+            'completed': {
+                'color': '#27ae60',
+                'bg_color': '#e8f8f5',
+                'border_color': '#27ae60'
+            },
+            'error': {
+                'color': '#c0392b',
+                'bg_color': '#fadbd8',
+                'border_color': '#c0392b'
+            }
+        }
+        
+        config = style_configs.get(status_type, style_configs['idle'])
+        font_size = self.get_responsive_font_size()
+        
+        self.measurement_status.setStyleSheet(f"""
+            QLabel {{
+                font-weight: bold;
+                font-size: {font_size}px;
+                color: {config['color']};
+                background-color: {config['bg_color']};
+                border: 2px solid {config['border_color']};
+                border-radius: 8px;
+                padding: 8px 15px;
+                min-height: 25px;
+            }}
+        """)
+        
+    def get_responsive_font_size(self):
+        """
+        根據窗口大小計算響應式字體大小
+        Returns:
+            int: 字體大小（像素）
+        """
+        # 獲取當前窗口寬度
+        window_width = self.width() if self.width() > 0 else 1200
+        
+        # 基礎字體大小計算：根據窗口寬度動態調整
+        if window_width >= 1400:
+            return 20  # 大螢幕
+        elif window_width >= 1200:
+            return 18  # 中等螢幕  
+        elif window_width >= 1000:
+            return 16  # 小螢幕
+        else:
+            return 14  # 極小螢幕
+            
+    def resizeEvent(self, event):
+        """窗口大小改變時更新響應式字體"""
+        super().resizeEvent(event)
+        
+        # 更新狀態顯示字體大小
+        if hasattr(self, 'measurement_status') and hasattr(self, 'data_points_label'):
+            font_size = self.get_responsive_font_size()
+            
+            # 更新測量狀態字體（保持當前顏色樣式）
+            current_style = self.measurement_status.styleSheet()
+            if current_style:
+                # 替換字體大小
+                import re
+                new_style = re.sub(r'font-size:\s*\d+px', f'font-size: {font_size}px', current_style)
+                self.measurement_status.setStyleSheet(new_style)
+            
+            # 更新數據點標籤字體
+            self.data_points_label.setStyleSheet(f"""
+                QLabel {{
+                    font-weight: bold;
+                    font-size: {font_size}px;
+                    color: #27ae60;
+                    background-color: #e8f6f3;
+                    border: 2px solid #27ae60;
+                    border-radius: 8px;
+                    padding: 8px 15px;
+                    min-height: 25px;
+                }}
+            """)
         
     def create_chart_tab(self):
         """創建圖表分頁"""
@@ -1002,6 +1140,7 @@ class ProfessionalKeithleyWidget(QWidget):
             
             self.progress_bar.setVisible(True)
             self.measurement_status.setText("🔄 IV掃描進行中...")
+            self.update_status_style('running')
             self.log_message(f"🚀 開始IV掃描: {start_value}V → {stop_value}V, 步進: {step_value}V")
             
         except Exception as e:
@@ -1021,6 +1160,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.continuous_worker.start_measurement()
             
             self.measurement_status.setText("📈 連續測量中...")
+            self.update_status_style('running')
             self.log_message("▶️ 開始連續測量")
             
         except Exception as e:
@@ -1121,6 +1261,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.stop_btn.setEnabled(False)
             self.progress_bar.setVisible(False)
             self.measurement_status.setText("⏸️ 測量已停止")
+            self.update_status_style('idle')
             
             self.log_message("⏹️ 測量已停止，輸出已關閉")
             
@@ -1312,6 +1453,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def on_sweep_completed(self):
         """掃描完成處理"""
         self.measurement_status.setText("✅ IV掃描已完成")
+        self.update_status_style('completed')
         self.progress_bar.setVisible(False)
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
