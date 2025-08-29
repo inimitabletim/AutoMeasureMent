@@ -493,7 +493,7 @@ class ProfessionalKeithleyWidget(QWidget):
         voltage_label = QLabel("電壓:")
         voltage_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(voltage_label, 0, 0)
-        self.voltage_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
+        self.voltage_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
         self.voltage_display.setStyleSheet("""
             QLCDNumber { 
                 color: #2980b9; 
@@ -511,7 +511,7 @@ class ProfessionalKeithleyWidget(QWidget):
         current_label = QLabel("電流:")
         current_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(current_label, 0, 3)
-        self.current_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
+        self.current_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
         self.current_display.setStyleSheet("""
             QLCDNumber { 
                 color: #e74c3c; 
@@ -529,7 +529,7 @@ class ProfessionalKeithleyWidget(QWidget):
         power_label = QLabel("功率:")
         power_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(power_label, 0, 6)
-        self.power_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
+        self.power_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
         self.power_display.setStyleSheet("""
             QLCDNumber { 
                 color: #f39c12; 
@@ -547,7 +547,7 @@ class ProfessionalKeithleyWidget(QWidget):
         resistance_label = QLabel("電阻:")
         resistance_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(resistance_label, 0, 9)
-        self.resistance_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
+        self.resistance_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
         self.resistance_display.setStyleSheet("""
             QLCDNumber { 
                 color: #27ae60; 
