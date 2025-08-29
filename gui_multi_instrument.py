@@ -397,10 +397,6 @@ def main():
     app.setApplicationName("Multi-Instrument Control System")
     app.setApplicationVersion("1.0")
     
-    # 設定應用程式統一字體大小
-    font = QFont()
-    font.setPointSize(15)
-    app.setFont(font)
     
     # 創建主視窗
     window = MultiInstrumentGUI()

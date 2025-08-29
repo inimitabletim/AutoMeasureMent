@@ -194,12 +194,12 @@ class ThemeStyleSheet:
                 left: 12px;
                 padding: 0 8px 0 8px;
                 color: #34495e;
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: bold;
             }
             QLabel {
                 color: #2c3e50;
-                font-size: 13px;
+                font-size: 15px;
             }
             QLineEdit {
                 border: 2px solid #ecf0f1;
@@ -207,7 +207,7 @@ class ThemeStyleSheet:
                 padding: 6px;
                 background-color: #ffffff;
                 color: #2c3e50;
-                font-size: 13px;
+                font-size: 15px;
                 selection-background-color: #3498db;
             }
             QLineEdit:focus {
@@ -220,14 +220,14 @@ class ThemeStyleSheet:
                 padding: 6px;
                 background-color: #ffffff;
                 color: #2c3e50;
-                font-size: 13px;
+                font-size: 15px;
             }
             QDoubleSpinBox:focus, QComboBox:focus {
                 border: 2px solid #3498db;
             }
             QCheckBox {
                 color: #2c3e50;
-                font-size: 13px;
+                font-size: 15px;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -250,7 +250,7 @@ class ThemeStyleSheet:
                 padding: 10px 18px;
                 border-radius: 5px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 15px;
                 min-height: 20px;
             }
             QPushButton:hover {
@@ -269,13 +269,13 @@ class ThemeStyleSheet:
                 background-color: #ffffff;
                 color: #2c3e50;
                 font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-                font-size: 12px;
+                font-size: 14px;
                 padding: 8px;
             }
             QStatusBar {
                 background-color: #ecf0f1;
                 color: #2c3e50;
-                font-size: 12px;
+                font-size: 14px;
                 border-top: 1px solid #bdc3c7;
             }
         """
@@ -302,12 +302,12 @@ class ThemeStyleSheet:
                 left: 12px;
                 padding: 0 8px 0 8px;
                 color: #ffffff;
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: bold;
             }
             QLabel {
                 color: #ffffff;
-                font-size: 13px;
+                font-size: 15px;
             }
             QLineEdit {
                 border: 2px solid #555555;
@@ -315,7 +315,7 @@ class ThemeStyleSheet:
                 padding: 6px;
                 background-color: #404040;
                 color: #ffffff;
-                font-size: 13px;
+                font-size: 15px;
                 selection-background-color: #0078d4;
             }
             QLineEdit:focus {
@@ -328,14 +328,14 @@ class ThemeStyleSheet:
                 padding: 6px;
                 background-color: #404040;
                 color: #ffffff;
-                font-size: 13px;
+                font-size: 15px;
             }
             QDoubleSpinBox:focus, QComboBox:focus {
                 border: 2px solid #0078d4;
             }
             QCheckBox {
                 color: #ffffff;
-                font-size: 13px;
+                font-size: 15px;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -358,7 +358,7 @@ class ThemeStyleSheet:
                 padding: 10px 18px;
                 border-radius: 5px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 15px;
                 min-height: 20px;
             }
             QPushButton:hover {
@@ -377,13 +377,13 @@ class ThemeStyleSheet:
                 background-color: #1e1e1e;
                 color: #ffffff;
                 font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-                font-size: 12px;
+                font-size: 14px;
                 padding: 8px;
             }
             QStatusBar {
                 background-color: #404040;
                 color: #ffffff;
-                font-size: 12px;
+                font-size: 14px;
                 border-top: 1px solid #555555;
             }
         """
