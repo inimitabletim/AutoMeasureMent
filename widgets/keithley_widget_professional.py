@@ -493,7 +493,7 @@ class ProfessionalKeithleyWidget(QWidget):
         voltage_label = QLabel("電壓:")
         voltage_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(voltage_label, 0, 0)
-        self.voltage_display = QLCDNumber(10)  # 增加數字位數
+        self.voltage_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
         self.voltage_display.setStyleSheet("""
             QLCDNumber { 
                 color: #2980b9; 
@@ -503,15 +503,15 @@ class ProfessionalKeithleyWidget(QWidget):
             }
         """)
         values_layout.addWidget(self.voltage_display, 0, 1)
-        unit_v = QLabel("V")
-        unit_v.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px;")
-        values_layout.addWidget(unit_v, 0, 2)
+        self.voltage_unit_label = QLabel("V")
+        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px;")
+        values_layout.addWidget(self.voltage_unit_label, 0, 2)
         
         # 電流顯示 - 專業級樣式
         current_label = QLabel("電流:")
         current_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(current_label, 0, 3)
-        self.current_display = QLCDNumber(10)  # 增加數字位數
+        self.current_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
         self.current_display.setStyleSheet("""
             QLCDNumber { 
                 color: #e74c3c; 
@@ -521,15 +521,15 @@ class ProfessionalKeithleyWidget(QWidget):
             }
         """)
         values_layout.addWidget(self.current_display, 0, 4)
-        unit_a = QLabel("A")
-        unit_a.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px;")
-        values_layout.addWidget(unit_a, 0, 5)
+        self.current_unit_label = QLabel("A")
+        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px;")
+        values_layout.addWidget(self.current_unit_label, 0, 5)
         
         # 功率顯示 - 專業級樣式 (移至第一排)
         power_label = QLabel("功率:")
         power_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(power_label, 0, 6)
-        self.power_display = QLCDNumber(10)  # 增加數字位數
+        self.power_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
         self.power_display.setStyleSheet("""
             QLCDNumber { 
                 color: #f39c12; 
@@ -539,15 +539,15 @@ class ProfessionalKeithleyWidget(QWidget):
             }
         """)
         values_layout.addWidget(self.power_display, 0, 7)
-        unit_w = QLabel("W")
-        unit_w.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px;")
-        values_layout.addWidget(unit_w, 0, 8)
+        self.power_unit_label = QLabel("W")
+        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px;")
+        values_layout.addWidget(self.power_unit_label, 0, 8)
         
         # 電阻顯示 - 專業級樣式 (移至第一排)
         resistance_label = QLabel("電阻:")
         resistance_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
         values_layout.addWidget(resistance_label, 0, 9)
-        self.resistance_display = QLCDNumber(10)  # 增加數字位數
+        self.resistance_display = QLCDNumber(5)  # 優化為5位數 (XXX.XX格式)
         self.resistance_display.setStyleSheet("""
             QLCDNumber { 
                 color: #27ae60; 
@@ -557,9 +557,9 @@ class ProfessionalKeithleyWidget(QWidget):
             }
         """)
         values_layout.addWidget(self.resistance_display, 0, 10)
-        unit_ohm = QLabel("Ω")
-        unit_ohm.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
-        values_layout.addWidget(unit_ohm, 0, 11)
+        self.resistance_unit_label = QLabel("Ω")
+        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
+        values_layout.addWidget(self.resistance_unit_label, 0, 11)
         
         # 設置 QGridLayout 的拉伸係數，讓 LCD 顯示器能夠響應式縮放
         # 為 LCD 顯示器所在的列設置拉伸係數
@@ -567,12 +567,6 @@ class ProfessionalKeithleyWidget(QWidget):
         values_layout.setColumnStretch(4, 2)   # 電流 LCD 列  
         values_layout.setColumnStretch(7, 2)   # 功率 LCD 列
         values_layout.setColumnStretch(10, 2)  # 電阻 LCD 列
-        
-        # 設置 QLCDNumber 的尺寸政策為擴展
-        self.voltage_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.current_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.power_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.resistance_display.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
         # 狀態信息 - 整合到第二排
         self.measurement_status = QLabel("⏸️ 待機中")
@@ -1135,6 +1129,47 @@ class ProfessionalKeithleyWidget(QWidget):
     
     # ==================== 數據更新方法 ====================
     
+    def format_engineering_value(self, value, unit_type='V'):
+        """
+        將數值轉換為工程計數法格式
+        Args:
+            value: 原始數值
+            unit_type: 單位類型 ('V', 'A', 'W', 'Ω')
+        Returns:
+            tuple: (formatted_value, unit_string)
+        """
+        if value == 0:
+            return "0.00", unit_type
+        
+        abs_value = abs(value)
+        sign = '-' if value < 0 else ''
+        
+        # 定義單位前綴和範圍
+        if unit_type in ['V', 'A', 'W']:
+            # 電壓、電流、功率使用標準單位前綴
+            if abs_value >= 1000:
+                return f"{sign}{abs_value/1000:.2f}", f"k{unit_type}"
+            elif abs_value >= 1:
+                return f"{sign}{abs_value:.2f}", unit_type
+            elif abs_value >= 0.001:
+                return f"{sign}{abs_value*1000:.2f}", f"m{unit_type}"
+            elif abs_value >= 0.000001:
+                return f"{sign}{abs_value*1000000:.2f}", f"μ{unit_type}"
+            else:
+                return f"{sign}{abs_value*1000000000:.2f}", f"n{unit_type}"
+        elif unit_type == 'Ω':
+            # 電阻使用不同的單位範圍
+            if abs_value >= 1000000:
+                return f"{sign}{abs_value/1000000:.2f}", "MΩ"
+            elif abs_value >= 1000:
+                return f"{sign}{abs_value/1000:.2f}", "kΩ"
+            elif abs_value >= 1:
+                return f"{sign}{abs_value:.2f}", "Ω"
+            else:
+                return f"{sign}{abs_value*1000:.2f}", "mΩ"
+        
+        return f"{sign}{abs_value:.2f}", unit_type
+    
     def update_iv_data(self, voltage, current, resistance, power, point_num):
         """更新IV數據 (使用儀器計算的功率值)"""
         # power 參數現在來自儀器的 SCPI 計算，不再本地重新計算
@@ -1142,11 +1177,22 @@ class ProfessionalKeithleyWidget(QWidget):
         # 存儲數據
         self.iv_data.append((voltage, current, resistance, power))
         
-        # 更新LCD顯示
-        self.voltage_display.display(f"{voltage:.6f}")
-        self.current_display.display(f"{current:.6f}")
-        self.resistance_display.display(f"{resistance:.2f}")
-        self.power_display.display(f"{power:.6f}")
+        # 更新LCD顯示 - 使用工程計數法格式
+        v_val, v_unit = self.format_engineering_value(voltage, 'V')
+        self.voltage_display.display(v_val)
+        self.voltage_unit_label.setText(v_unit)
+        
+        i_val, i_unit = self.format_engineering_value(current, 'A')
+        self.current_display.display(i_val)
+        self.current_unit_label.setText(i_unit)
+        
+        r_val, r_unit = self.format_engineering_value(resistance, 'Ω')
+        self.resistance_display.display(r_val)
+        self.resistance_unit_label.setText(r_unit)
+        
+        p_val, p_unit = self.format_engineering_value(power, 'W')
+        self.power_display.display(p_val)
+        self.power_unit_label.setText(p_unit)
         
         # 更新圖表
         if self.chart_type_combo.currentText() == "IV特性曲線":
@@ -1175,11 +1221,22 @@ class ProfessionalKeithleyWidget(QWidget):
         # 存儲數據
         self.time_series_data.append((current_time, voltage, current, resistance, power))
         
-        # 更新LCD顯示
-        self.voltage_display.display(f"{voltage:.6f}")
-        self.current_display.display(f"{current:.6f}")
-        self.resistance_display.display(f"{resistance:.2f}")
-        self.power_display.display(f"{power:.6f}")
+        # 更新LCD顯示 - 使用工程計數法格式
+        v_val, v_unit = self.format_engineering_value(voltage, 'V')
+        self.voltage_display.display(v_val)
+        self.voltage_unit_label.setText(v_unit)
+        
+        i_val, i_unit = self.format_engineering_value(current, 'A')
+        self.current_display.display(i_val)
+        self.current_unit_label.setText(i_unit)
+        
+        r_val, r_unit = self.format_engineering_value(resistance, 'Ω')
+        self.resistance_display.display(r_val)
+        self.resistance_unit_label.setText(r_unit)
+        
+        p_val, p_unit = self.format_engineering_value(power, 'W')
+        self.power_display.display(p_val)
+        self.power_unit_label.setText(p_unit)
         
         # 更新時間序列圖表
         chart_type = self.chart_type_combo.currentText()
