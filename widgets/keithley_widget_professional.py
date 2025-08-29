@@ -246,7 +246,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         layout.addWidget(QLabel("模式:"), 0, 0)
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["連續監控", "IV特性掃描", "時間序列"])
+        self.mode_combo.addItems(["連續監控", "時間序列"])  # 暫時隱藏 IV特性掃描
         self.mode_combo.currentTextChanged.connect(self.on_measurement_mode_changed)
         layout.addWidget(self.mode_combo, 0, 1)
         
@@ -285,7 +285,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.delay_input.setSuffix(" ms")
         layout.addWidget(self.delay_input, 3, 1)
         
-        # 默認隱藏（只在IV掃描模式顯示）
+        # IV 功能暫時隱藏，掃描設定也隱藏
         group.setVisible(False)
         return group
         
@@ -737,7 +737,7 @@ class ProfessionalKeithleyWidget(QWidget):
         chart_control.addWidget(QLabel("圖表類型:"))
         
         self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItems(["IV特性曲線", "電壓時間序列", "電流時間序列", "功率曲線"])
+        self.chart_type_combo.addItems(["電壓時間序列", "電流時間序列", "功率曲線"])  # 暫時隱藏 IV特性曲線
         self.chart_type_combo.currentTextChanged.connect(self.update_chart_display)
         chart_control.addWidget(self.chart_type_combo)
         
@@ -1582,18 +1582,32 @@ class ProfessionalKeithleyWidget(QWidget):
         try:
             if self.current_theme == "dark":
                 # 深色主題
-                self.plot_widget.setBackground('#2b2b2b')
-                self.plot_widget.getAxis('left').setPen('#ffffff')
-                self.plot_widget.getAxis('bottom').setPen('#ffffff')
-                self.plot_widget.getAxis('left').setTextPen('#ffffff')
-                self.plot_widget.getAxis('bottom').setTextPen('#ffffff')
+                if hasattr(self, 'main_plot_widget'):
+                    self.main_plot_widget.setBackground('#2b2b2b')
+                    self.main_plot_widget.getAxis('left').setPen('#ffffff')
+                    self.main_plot_widget.getAxis('bottom').setPen('#ffffff')
+                    self.main_plot_widget.getAxis('left').setTextPen('#ffffff')
+                    self.main_plot_widget.getAxis('bottom').setTextPen('#ffffff')
+                if hasattr(self, 'aux_plot_widget'):
+                    self.aux_plot_widget.setBackground('#2b2b2b')
+                    self.aux_plot_widget.getAxis('left').setPen('#ffffff')
+                    self.aux_plot_widget.getAxis('bottom').setPen('#ffffff')
+                    self.aux_plot_widget.getAxis('left').setTextPen('#ffffff')
+                    self.aux_plot_widget.getAxis('bottom').setTextPen('#ffffff')
             else:
                 # 淺色主題
-                self.plot_widget.setBackground('#ffffff')
-                self.plot_widget.getAxis('left').setPen('#000000')
-                self.plot_widget.getAxis('bottom').setPen('#000000')
-                self.plot_widget.getAxis('left').setTextPen('#000000')
-                self.plot_widget.getAxis('bottom').setTextPen('#000000')
+                if hasattr(self, 'main_plot_widget'):
+                    self.main_plot_widget.setBackground('#ffffff')
+                    self.main_plot_widget.getAxis('left').setPen('#000000')
+                    self.main_plot_widget.getAxis('bottom').setPen('#000000')
+                    self.main_plot_widget.getAxis('left').setTextPen('#000000')
+                    self.main_plot_widget.getAxis('bottom').setTextPen('#000000')
+                if hasattr(self, 'aux_plot_widget'):
+                    self.aux_plot_widget.setBackground('#ffffff')
+                    self.aux_plot_widget.getAxis('left').setPen('#000000')
+                    self.aux_plot_widget.getAxis('bottom').setPen('#000000')
+                    self.aux_plot_widget.getAxis('left').setTextPen('#000000')
+                    self.aux_plot_widget.getAxis('bottom').setTextPen('#000000')
                 
         except Exception as e:
             self.logger.error(f"更新圖表主題失敗: {e}")
