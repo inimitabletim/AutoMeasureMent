@@ -148,6 +148,12 @@ class EnhancedDataLogger(QObject):
         self.memory_buffer = deque(maxlen=max_memory_points)
         self.total_points = 0
         
+        # 日誌 (必須先初始化，因為其他方法會使用)
+        self.logger = logging.getLogger(__name__)
+        
+        # 線程鎖
+        self.data_lock = threading.RLock()
+        
         # 數據分析
         self.analyzer = DataAnalyzer()
         
@@ -158,12 +164,6 @@ class EnhancedDataLogger(QObject):
         # 自動保存定時器
         self.auto_save_timer = QTimer()
         self.auto_save_timer.timeout.connect(self.auto_save_data)
-        
-        # 線程鎖
-        self.data_lock = threading.RLock()
-        
-        # 日誌
-        self.logger = logging.getLogger(__name__)
         
     def init_database(self):
         """初始化SQLite數據庫"""

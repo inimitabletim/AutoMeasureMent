@@ -21,7 +21,7 @@ import pyqtgraph as pg
 from pyqtgraph import PlotWidget
 
 from src.keithley_2461 import Keithley2461
-from src.data_logger import DataLogger
+from src.enhanced_data_system import EnhancedDataLogger
 from widgets.unit_input_widget import UnitInputWidget, UnitDisplayWidget
 
 
@@ -1069,10 +1069,31 @@ class ProfessionalKeithleyWidget(QWidget):
                     
                     self.log_message(f"✅ 成功連接到設備: {ip_address}")
                     
-                    # 初始化數據記錄器
-                    self.data_logger = DataLogger()
-                    session_name = self.data_logger.start_session()
-                    self.log_message(f"📊 開始數據記錄會話: {session_name}")
+                    # 初始化增強型數據記錄器
+                    self.data_logger = EnhancedDataLogger(
+                        base_path="data",
+                        auto_save_interval=300,  # 5分鐘自動保存
+                        max_memory_points=5000   # 5000個數據點內存限制
+                    )
+                    
+                    # 連接數據系統信號
+                    self.data_logger.data_saved.connect(self.on_data_saved)
+                    self.data_logger.statistics_updated.connect(self.on_statistics_updated)
+                    self.data_logger.anomaly_detected.connect(self.on_anomaly_detected)
+                    self.data_logger.storage_warning.connect(self.on_storage_warning)
+                    
+                    # 準備會話配置
+                    instrument_config = {
+                        'instrument': 'Keithley 2461',
+                        'ip_address': ip_address,
+                        'connection_time': datetime.now().isoformat()
+                    }
+                    
+                    session_name = self.data_logger.start_session(
+                        description=f"Keithley 2461 測量會話 - {ip_address}",
+                        instrument_config=instrument_config
+                    )
+                    self.log_message(f"📊 開始增強型數據記錄會話: {session_name}")
                     
                     # 發送連接狀態信號
                     self.connection_changed.emit(True, ip_address)
@@ -1097,6 +1118,15 @@ class ProfessionalKeithleyWidget(QWidget):
                 self.keithley.disconnect()
                 
             self.keithley = None
+            
+            # 關閉數據記錄會話
+            if self.data_logger:
+                try:
+                    self.data_logger.close_session()
+                    self.data_logger = None
+                    self.log_message("📊 數據記錄會話已關閉")
+                except Exception as e:
+                    self.log_message(f"❌ 關閉數據會話錯誤: {e}")
             
             # 更新UI狀態
             self.connection_status.setText("🔴 未連接")
@@ -1527,8 +1557,9 @@ class ProfessionalKeithleyWidget(QWidget):
             return
             
         try:
-            if self.data_logger and self.data_logger.session_data:
-                csv_file = self.data_logger.save_session_csv()
+            if self.data_logger:
+                # 使用增強數據系統的匯出功能
+                csv_file = self.data_logger.export_session_data('csv')
                 QMessageBox.information(self, "成功", f"數據已導出到:\n{csv_file}")
                 self.log_message(f"📊 數據已導出到: {csv_file}")
             else:
@@ -1587,11 +1618,75 @@ class ProfessionalKeithleyWidget(QWidget):
             self.power_display.display(0)
             self.data_points_label.setText("數據點: 0")
             
-            # 清除記錄器數據
+            # 清除增強數據系統的內存緩存
             if self.data_logger:
-                self.data_logger.session_data.clear()
+                try:
+                    with self.data_logger.data_lock:
+                        self.data_logger.memory_buffer.clear()
+                        self.data_logger.total_points = 0
+                        self.log_message("💾 內存數據已清除")
+                except Exception as e:
+                    self.log_message(f"❌ 清除數據錯誤: {e}")
                 
             self.log_message("🔄 所有測量數據已清除")
+    
+    def on_data_saved(self, message):
+        """處理數據保存完成信號"""
+        self.log_message(f"💾 {message}")
+        
+    def on_statistics_updated(self, stats):
+        """處理統計數據更新信號"""
+        try:
+            # 更新狀態欄顯示統計信息
+            session_info = stats.get('session_info', {})
+            total_points = session_info.get('total_points', 0)
+            duration = session_info.get('duration_seconds', 0)
+            
+            # 格式化持續時間
+            hours = int(duration // 3600)
+            minutes = int((duration % 3600) // 60)
+            seconds = int(duration % 60)
+            
+            status_text = f"📊 數據點: {total_points} | 運行時間: {hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            # 添加統計摘要
+            voltage_stats = stats.get('voltage', {})
+            if voltage_stats.get('count', 0) > 0:
+                v_avg = voltage_stats.get('mean', 0)
+                status_text += f" | 平均電壓: {v_avg:.3f}V"
+                
+            self.measurement_status.setText(status_text)
+            
+        except Exception as e:
+            self.logger.error(f"統計更新錯誤: {e}")
+    
+    def on_anomaly_detected(self, message, data):
+        """處理異常檢測信號"""
+        self.log_message(f"⚠️ 異常檢測: {message}")
+        
+        # 可選：顯示更詳細的異常信息
+        try:
+            v = data.get('voltage_v', 0)
+            i = data.get('current_a', 0)
+            self.log_message(f"   異常數據點: V={v:.6f}V, I={i:.6f}A")
+        except:
+            pass
+    
+    def on_storage_warning(self, message):
+        """處理存儲警告信號"""
+        self.log_message(f"💽 存儲警告: {message}")
+        
+        # 顯示用戶友好的提醒
+        try:
+            if hasattr(self, 'data_logger') and self.data_logger:
+                stats = self.data_logger.get_session_statistics()
+                session_info = stats.get('session_info', {})
+                total_points = session_info.get('total_points', 0)
+                
+                if total_points > 4000:  # 接近內存限制
+                    self.log_message("💡 建議：數據點較多，系統將自動保存到數據庫")
+        except:
+            pass
     
     def log_message(self, message):
         """添加日誌訊息"""
