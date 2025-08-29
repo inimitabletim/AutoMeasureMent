@@ -1144,11 +1144,18 @@ class ProfessionalKeithleyWidget(QWidget):
         abs_value = abs(value)
         sign = '-' if value < 0 else ''
         
-        # 定義單位前綴和範圍
+        # 定義單位前綴和範圍 - 優化閾值以適應6位LCD顯示
         if unit_type in ['V', 'A', 'W']:
             # 電壓、電流、功率使用標準單位前綴
+            # 調整閾值：當值 >= 100 時就轉換，確保顯示不超過6位（含負號）
             if abs_value >= 1000:
                 return f"{sign}{abs_value/1000:.2f}", f"k{unit_type}"
+            elif abs_value >= 100:
+                # 100-999 範圍：如果保持原單位會需要6-7位，轉換為較大單位
+                if len(f"{sign}{abs_value:.2f}") > 6:
+                    return f"{sign}{abs_value/1000:.3f}", f"k{unit_type}"
+                else:
+                    return f"{sign}{abs_value:.2f}", unit_type
             elif abs_value >= 1:
                 return f"{sign}{abs_value:.2f}", unit_type
             elif abs_value >= 0.001:
@@ -1158,11 +1165,17 @@ class ProfessionalKeithleyWidget(QWidget):
             else:
                 return f"{sign}{abs_value*1000000000:.2f}", f"n{unit_type}"
         elif unit_type == 'Ω':
-            # 電阻使用不同的單位範圍
+            # 電阻使用不同的單位範圍 - 優化閾值以適應6位LCD顯示
             if abs_value >= 1000000:
                 return f"{sign}{abs_value/1000000:.2f}", "MΩ"
             elif abs_value >= 1000:
                 return f"{sign}{abs_value/1000:.2f}", "kΩ"
+            elif abs_value >= 100:
+                # 100-999 範圍：檢查是否會超過6位
+                if len(f"{sign}{abs_value:.2f}") > 6:
+                    return f"{sign}{abs_value/1000:.3f}", "kΩ"
+                else:
+                    return f"{sign}{abs_value:.2f}", "Ω"
             elif abs_value >= 1:
                 return f"{sign}{abs_value:.2f}", "Ω"
             else:
