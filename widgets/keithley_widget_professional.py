@@ -158,6 +158,13 @@ class ProfessionalKeithleyWidget(QWidget):
         # 日誌
         self.logger = logging.getLogger(__name__)
         
+        # 狀態更新定時器
+        self.status_update_timer = QTimer()
+        self.status_update_timer.timeout.connect(self.update_runtime_display)
+        
+        # 統計數據緩存
+        self._last_avg_voltage = None
+        
         self.setup_ui()
         
     def setup_ui(self):
@@ -606,27 +613,12 @@ class ProfessionalKeithleyWidget(QWidget):
         separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
         separator.setStyleSheet("color: #95a5a6; font-size: 20px; font-weight: bold;")
         
-        # 數據點顯示 - 居中對齊，響應式字體，更醒目的顏色
-        self.data_points_label = QLabel("數據點: 0")
-        self.data_points_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.data_points_label.setStyleSheet("""
-            QLabel {
-                font-weight: bold;
-                font-size: 18px;
-                color: #27ae60;
-                background-color: #e8f6f3;
-                border: 2px solid #27ae60;
-                border-radius: 8px;
-                padding: 8px 15px;
-                min-height: 25px;
-            }
-        """)
-        self.data_points_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        # 移除重複的數據點標籤，統一使用狀態欄顯示
         
         # 添加到水平佈局
         status_layout.addWidget(self.measurement_status, 1)
         status_layout.addWidget(separator)
-        status_layout.addWidget(self.data_points_label, 1)
+        # 數據點計數統一在狀態欄顯示，不再需要單獨標籤
         
         # 將狀態容器添加到 GroupBox 佈局
         values_layout.addWidget(status_container, 1, 0, 1, 12)  # 跨越所有列
@@ -705,7 +697,7 @@ class ProfessionalKeithleyWidget(QWidget):
         super().resizeEvent(event)
         
         # 更新狀態顯示字體大小
-        if hasattr(self, 'measurement_status') and hasattr(self, 'data_points_label'):
+        if hasattr(self, 'measurement_status'):
             font_size = self.get_responsive_font_size()
             
             # 更新測量狀態字體（保持當前顏色樣式）
@@ -716,19 +708,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 new_style = re.sub(r'font-size:\s*\d+px', f'font-size: {font_size}px', current_style)
                 self.measurement_status.setStyleSheet(new_style)
             
-            # 更新數據點標籤字體
-            self.data_points_label.setStyleSheet(f"""
-                QLabel {{
-                    font-weight: bold;
-                    font-size: {font_size}px;
-                    color: #27ae60;
-                    background-color: #e8f6f3;
-                    border: 2px solid #27ae60;
-                    border-radius: 8px;
-                    padding: 8px 15px;
-                    min-height: 25px;
-                }}
-            """)
+            # 數據點計數已統一在狀態欄顯示
         
     def create_chart_tab(self):
         """創建圖表分頁"""
@@ -1158,6 +1138,9 @@ class ProfessionalKeithleyWidget(QWidget):
             self.time_series_data.clear()
             self.start_time = datetime.now()
             
+            # 啟動狀態更新定時器
+            self.status_update_timer.start(1000)  # 每秒更新一次
+            
             if self.measurement_mode == "iv_sweep":
                 self.start_iv_sweep()
             else:
@@ -1318,6 +1301,9 @@ class ProfessionalKeithleyWidget(QWidget):
         try:
             self.is_measuring = False
             
+            # 停止狀態更新定時器
+            self.status_update_timer.stop()
+            
             # 停止工作執行緒
             if self.sweep_worker:
                 self.sweep_worker.stop_sweep()
@@ -1441,7 +1427,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.data_logger.log_measurement(voltage, current, resistance, power)
         
         # 更新狀態
-        self.data_points_label.setText(f"數據點: {len(self.iv_data)}")
+        # 數據點統一在狀態欄顯示
     
     def update_continuous_data(self, voltage, current, resistance, power):
         """更新連續測量數據"""
@@ -1501,7 +1487,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.data_logger.log_measurement(voltage, current, resistance, power)
         
         # 更新狀態
-        self.data_points_label.setText(f"數據點: {len(self.time_series_data)}")
+        # 數據點統一在狀態欄顯示
     
     def add_data_to_table(self, point_num, voltage, current, resistance, power):
         """添加數據到表格"""
@@ -1616,7 +1602,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.current_display.display(0)
             self.resistance_display.display(0)
             self.power_display.display(0)
-            self.data_points_label.setText("數據點: 0")
+            # 數據點計數由增強數據系統管理
             
             # 清除增強數據系統的內存緩存
             if self.data_logger:
@@ -1634,29 +1620,46 @@ class ProfessionalKeithleyWidget(QWidget):
         """處理數據保存完成信號"""
         self.log_message(f"💾 {message}")
         
-    def on_statistics_updated(self, stats):
-        """處理統計數據更新信號"""
-        try:
-            # 更新狀態欄顯示統計信息
-            session_info = stats.get('session_info', {})
-            total_points = session_info.get('total_points', 0)
-            duration = session_info.get('duration_seconds', 0)
+    def update_runtime_display(self):
+        """使用QTimer更新運行時間顯示"""
+        if not self.is_measuring or not hasattr(self, 'start_time') or not self.start_time:
+            return
             
-            # 格式化持續時間
+        try:
+            # 計算運行時間
+            duration = (datetime.now() - self.start_time).total_seconds()
             hours = int(duration // 3600)
             minutes = int((duration % 3600) // 60)
             seconds = int(duration % 60)
             
+            # 獲取數據點數量
+            if self.data_logger and hasattr(self.data_logger, 'total_points'):
+                total_points = self.data_logger.total_points
+            else:
+                total_points = len(self.time_series_data) if hasattr(self, 'time_series_data') else 0
+            
+            # 構建狀態文字
             status_text = f"📊 數據點: {total_points} | 運行時間: {hours:02d}:{minutes:02d}:{seconds:02d}"
             
-            # 添加統計摘要
-            voltage_stats = stats.get('voltage', {})
-            if voltage_stats.get('count', 0) > 0:
-                v_avg = voltage_stats.get('mean', 0)
-                status_text += f" | 平均電壓: {v_avg:.3f}V"
-                
+            # 如果有最近的統計數據，添加平均值顯示
+            if hasattr(self, '_last_avg_voltage') and self._last_avg_voltage is not None:
+                status_text += f" | 平均電壓: {self._last_avg_voltage:.3f}V"
+            
             self.measurement_status.setText(status_text)
             
+        except Exception as e:
+            self.logger.debug(f"運行時間更新錯誤: {e}")
+    
+    def on_statistics_updated(self, stats):
+        """處理統計數據更新信號"""
+        try:
+            # 保存統計數據供QTimer使用
+            voltage_stats = stats.get('voltage', {})
+            if voltage_stats.get('count', 0) > 0:
+                self._last_avg_voltage = voltage_stats.get('mean', 0)
+            else:
+                self._last_avg_voltage = None
+                
         except Exception as e:
             self.logger.error(f"統計更新錯誤: {e}")
     
