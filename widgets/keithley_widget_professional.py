@@ -389,6 +389,9 @@ class ProfessionalKeithleyWidget(QWidget):
         else:
             self.create_current_source_params()
             
+        # 智慧圖表類型切換
+        self.smart_chart_switching(source_type)
+            
     def create_voltage_source_params(self):
         """創建電壓源參數"""
         group = QGroupBox("🔋 電壓源參數")
@@ -877,8 +880,40 @@ class ProfessionalKeithleyWidget(QWidget):
                 self.chart_type_combo.setCurrentText(optimal_chart)
                 self.log_message(f"📊 智慧選擇「{optimal_chart}」圖表 - {config['reason']}")
     
+    def smart_chart_switching(self, source_type):
+        """根據源類型智慧切換圖表類型"""
+        # 檢查chart_type_combo是否已經創建
+        if not hasattr(self, 'chart_type_combo'):
+            return
+            
+        # 定義源類型與最佳圖表的對應關係
+        source_chart_mapping = {
+            "電壓源": {
+                "chart": "電流時間序列",
+                "reason": "電壓源模式下，觀察電流響應最為重要"
+            },
+            "電流源": {
+                "chart": "電壓時間序列", 
+                "reason": "電流源模式下，觀察電壓響應最為重要"
+            }
+        }
+        
+        config = source_chart_mapping.get(source_type)
+        if config:
+            current_chart = self.chart_type_combo.currentText()
+            optimal_chart = config["chart"]
+            
+            # 只有在當前圖表不是最佳選擇時才切換
+            if current_chart != optimal_chart:
+                self.chart_type_combo.setCurrentText(optimal_chart)
+                self.log_message(f"🔄 源類型智慧切換 - {config['reason']}")
+    
     def setup_chart_system(self):
         """初始化圖表系統"""
+        # 根據預設的電壓源模式進行初始智慧切換
+        initial_source_type = self.source_type_combo.currentText()
+        self.smart_chart_switching(initial_source_type)
+        
         self.update_chart_display()
         
     def update_chart_display(self):
@@ -1562,12 +1597,15 @@ class ProfessionalKeithleyWidget(QWidget):
         """添加日誌訊息"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}] {message}"
-        self.log_text.append(formatted_message)
         
-        # 自動滾動到底部
-        cursor = self.log_text.textCursor()
-        cursor.movePosition(cursor.MoveOperation.End)
-        self.log_text.setTextCursor(cursor)
+        # 檢查log_text是否已創建
+        if hasattr(self, 'log_text'):
+            self.log_text.append(formatted_message)
+            
+            # 自動滾動到底部
+            cursor = self.log_text.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            self.log_text.setTextCursor(cursor)
         
         # 同時輸出到控制台日誌
         self.logger.info(message)
