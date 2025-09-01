@@ -86,7 +86,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "storage": {
             "default_format": "csv",  # "csv", "json", "sqlite"
             "auto_save": True,
-            "auto_save_interval": 300,  # 秒
+            "auto_save_interval": 900,  # 15分鐘
             "session_naming": "timestamp",  # "timestamp", "manual", "auto"
             "base_path": "data"
         },

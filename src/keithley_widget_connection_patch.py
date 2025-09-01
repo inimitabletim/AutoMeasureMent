@@ -167,7 +167,7 @@ class EnhancedKeithleyConnectionMixin:
                 from src.enhanced_data_system import EnhancedDataLogger
                 self.data_logger = EnhancedDataLogger(
                     base_path="data",
-                    auto_save_interval=300,  # 5分鐘自動保存
+                    auto_save_interval=900,  # 15分鐘自動保存
                     max_memory_points=5000   # 5000個數據點內存限制
                 )
                 

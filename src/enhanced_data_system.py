@@ -130,7 +130,7 @@ class EnhancedDataLogger(QObject):
     storage_warning = pyqtSignal(str)  # 存儲警告
     
     def __init__(self, base_path: str = "data", 
-                 auto_save_interval: int = 300,  # 5分鐘自動保存
+                 auto_save_interval: int = 900,  # 15分鐘自動保存
                  max_memory_points: int = 10000):  # 內存最大數據點
         super().__init__()
         
