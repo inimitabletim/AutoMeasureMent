@@ -55,6 +55,12 @@ class OptimizedRigolWidget(InstrumentWidgetBase):
         
     def _setup_instrument_ui(self):
         """設置Rigol特定的UI組件"""
+        # 確保attributes已初始化
+        if not hasattr(self, 'available_devices'):
+            self.available_devices: List[DeviceInfo] = []
+        if not hasattr(self, 'current_device_info'):
+            self.current_device_info: Optional[DeviceInfo] = None
+            
         # 創建多設備管理面板
         device_panel = self._create_device_management_panel()
         self.instrument_controls_layout.addWidget(device_panel)
@@ -69,8 +75,8 @@ class OptimizedRigolWidget(InstrumentWidgetBase):
         # 連接Rigol特定信號
         self._connect_rigol_signals()
         
-        # 初始掃描設備
-        self._scan_devices()
+        # 初始掃描設備 - 使用QTimer延遲執行確保完全初始化
+        QTimer.singleShot(100, self._scan_devices)
         
     def _create_device_management_panel(self) -> QGroupBox:
         """創建多設備管理面板"""
