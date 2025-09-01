@@ -198,7 +198,22 @@ class PortManager(QObject):
         
     def connect_device(self, port: str, baudrate: int = 9600) -> bool:
         """標記設備為已連接狀態"""
-        device_info = self.identify_device(port, baudrate)
+        # 首先檢查是否已經有設備資訊
+        device_info = None
+        for port_info in self.available_ports:
+            if port_info.port == port:
+                device_info = port_info
+                break
+        
+        # 如果沒有設備資訊，嘗試識別設備（但避免重複連接已佔用的端口）
+        if not device_info or not device_info.device_id:
+            try:
+                device_info = self.identify_device(port, baudrate)
+            except Exception as e:
+                # 如果識別失敗，可能是端口已被佔用，嘗試使用預設資訊
+                self.logger.warning(f"端口 {port} 識別失敗，可能已被佔用: {e}")
+                device_info = DeviceInfo(port=port, device_type="DP711", device_id=f"DP711_{port}")
+        
         if device_info:
             device_info.is_connected = True
             self.connected_devices[port] = device_info
