@@ -251,11 +251,19 @@ class ProfessionalKeithleyWidget(QWidget):
         group = QGroupBox("📊 測量模式")
         layout = QGridLayout(group)
         
+        # 測量模式 - 漸進式設計：暫時固定為連續監控
         layout.addWidget(QLabel("模式:"), 0, 0)
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["連續監控", "時間序列"])  # 暫時隱藏 IV特性掃描
-        self.mode_combo.currentTextChanged.connect(self.on_measurement_mode_changed)
-        layout.addWidget(self.mode_combo, 0, 1)
+        
+        # TODO: 未來有多個模式時，取消註解並移除固定標籤
+        # self.mode_combo = QComboBox()
+        # self.mode_combo.addItems(["連續監控", "時間序列"])
+        # self.mode_combo.currentTextChanged.connect(self.on_measurement_mode_changed)
+        # layout.addWidget(self.mode_combo, 0, 1)
+        
+        # 暫時使用固定標籤
+        mode_label = QLabel("連續監控")
+        mode_label.setStyleSheet("font-weight: bold; color: #27ae60; background-color: #e8f5e8; padding: 3px 8px; border-radius: 3px;")
+        layout.addWidget(mode_label, 0, 1)
         
         layout.addWidget(QLabel("源類型:"), 1, 0)
         self.source_type_combo = QComboBox()
@@ -720,7 +728,7 @@ class ProfessionalKeithleyWidget(QWidget):
         chart_control.addWidget(QLabel("圖表類型:"))
         
         self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItems(["電壓時間序列", "電流時間序列", "功率曲線"])  # 暫時隱藏 IV特性曲線
+        self.chart_type_combo.addItems(["電壓時間序列", "電流時間序列"])  # 移除有問題的功率曲線
         self.chart_type_combo.currentTextChanged.connect(self.update_chart_display)
         chart_control.addWidget(self.chart_type_combo)
         
@@ -1462,14 +1470,20 @@ class ProfessionalKeithleyWidget(QWidget):
             resistances = [data[3] for data in self.time_series_data[-100:]]
             powers = [data[4] for data in self.time_series_data[-100:]]
             
-            # 根據圖表類型更新對應的曲線
-            if chart_type == "電壓時間序列" and hasattr(self, 'voltage_time_curve'):
-                self.voltage_time_curve.setData(times, voltages)
-                if hasattr(self, 'resistance_time_curve'):
+            # 根據圖表類型更新對應的曲線 - 強化輔助圖表更新
+            if chart_type == "電壓時間序列":
+                # 主圖表：電壓
+                if hasattr(self, 'voltage_time_curve') and self.voltage_time_curve is not None:
+                    self.voltage_time_curve.setData(times, voltages)
+                # 輔助圖表：電阻
+                if hasattr(self, 'resistance_time_curve') and self.resistance_time_curve is not None:
                     self.resistance_time_curve.setData(times, resistances)
-            elif chart_type == "電流時間序列" and hasattr(self, 'current_time_curve'):
-                self.current_time_curve.setData(times, currents)
-                if hasattr(self, 'power_time_curve'):
+            elif chart_type == "電流時間序列":
+                # 主圖表：電流
+                if hasattr(self, 'current_time_curve') and self.current_time_curve is not None:
+                    self.current_time_curve.setData(times, currents)
+                # 輔助圖表：功率
+                if hasattr(self, 'power_time_curve') and self.power_time_curve is not None:
                     self.power_time_curve.setData(times, powers)
             elif chart_type == "時間序列" and hasattr(self, 'voltage_curve'):
                 # 舊版相容性
