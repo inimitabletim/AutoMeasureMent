@@ -1324,7 +1324,40 @@ class ProfessionalKeithleyWidget(QWidget):
     
     def start_measurement(self):
         """開始測量"""
-        if not self.keithley or not self.keithley.connected:
+        # 檢查連線狀態 - 支援新舊連線機制
+        is_connected = False
+        
+        # 優先檢查儀器物件的連線狀態
+        if self.keithley and hasattr(self.keithley, 'connected') and self.keithley.connected:
+            is_connected = True
+        # 如果沒有儀器物件，檢查新的連線狀態widget
+        elif hasattr(self, 'connection_status_widget'):
+            status_text = self.connection_status_widget.status_text.text()
+            is_connected = "已連接" in status_text
+        # 最後檢查舊的連線狀態標籤
+        elif hasattr(self, 'connection_status'):
+            status_text = self.connection_status.text()
+            is_connected = "已連接" in status_text
+            
+        if not is_connected:
+            # 添加詳細的調試信息
+            debug_info = []
+            if self.keithley:
+                debug_info.append(f"keithley物件存在: {hasattr(self.keithley, 'connected')}")
+                if hasattr(self.keithley, 'connected'):
+                    debug_info.append(f"keithley.connected: {self.keithley.connected}")
+            else:
+                debug_info.append("keithley物件為None")
+                
+            if hasattr(self, 'connection_status_widget'):
+                status_text = self.connection_status_widget.status_text.text()
+                debug_info.append(f"新狀態widget: {status_text}")
+            
+            if hasattr(self, 'connection_status'):
+                status_text = self.connection_status.text()
+                debug_info.append(f"舊狀態標籤: {status_text}")
+                
+            self.log_message(f"🔍 連線狀態檢查: {'; '.join(debug_info)}")
             QMessageBox.warning(self, "警告", "請先連接設備")
             return
             
