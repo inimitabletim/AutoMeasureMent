@@ -507,6 +507,24 @@ class RigolControlWidget(QWidget):
         # 更新設備控制區域
         self.update_device_controls()
         
+    def update_device_controls(self):
+        """更新設備控制項狀態"""
+        has_active_device = self.dp711 is not None
+        
+        # 啟用/禁用所有控制項
+        self.enable_controls(has_active_device)
+        
+        # 更新設備資訊顯示
+        if has_active_device and self.active_device_port:
+            try:
+                identity = self.dp711.get_identity()
+                device_id = identity.split(',')[0] if ',' in identity else identity
+                self.device_info_label.setText(f"活動設備: {device_id}\n端口: {self.active_device_port}")
+            except:
+                self.device_info_label.setText(f"活動設備: DP711\n端口: {self.active_device_port}")
+        else:
+            self.device_info_label.setText("狀態: 無設備連接")
+        
     def _update_device_list(self):
         """更新設備列表顯示"""
         # 這裡可以添加設備列表UI更新邏輯
