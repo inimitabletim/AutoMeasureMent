@@ -98,7 +98,13 @@ class MultiDeviceManager(QObject):
                 else:
                     self.logger.warning(f"PortManager 標記失敗，但設備實際已連接，保持連接狀態")
                     # 不強制斷開，而是創建預設設備資訊
-                    device_info = DeviceInfo(port=port, device_type="DP711", device_id=f"DP711_{port}", is_connected=True)
+                    device_info = DeviceInfo(
+                        port=port, 
+                        description=f"Rigol DP711 - {port}",
+                        device_type="DP711", 
+                        device_id=f"DP711_{port}", 
+                        is_connected=True
+                    )
                     self.device_info[port] = device_info
                     
                     if self.active_device_port is None:
