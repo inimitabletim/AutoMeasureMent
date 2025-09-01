@@ -115,15 +115,10 @@ class ContinuousMeasurementWorker(QThread):
                     v, i, r, p = self.keithley.measure_all()
                     self.data_ready.emit(v, i, r, p)
                     measurement_count += 1
-                    # 每10次測量輸出一次調試信息
-                    if measurement_count % 10 == 1:
-                        print(f"[DEBUG] 測量 #{measurement_count}: V={v:.6f}, I={i:.6f}, R={r:.2f}, P={p:.6f}")
-                    self.msleep(500)  # 500ms間隔
+                    self.msleep(1000)  # 1000ms間隔 (1秒)
                 else:
-                    print(f"[DEBUG] 儀器未連接或狀態異常: keithley={self.keithley}, connected={getattr(self.keithley, 'connected', False)}")
                     self.msleep(1000)
             except Exception as e:
-                print(f"[DEBUG] 測量錯誤: {e}")
                 self.error_occurred.emit(str(e))
                 break
                 
@@ -1194,9 +1189,6 @@ class ProfessionalKeithleyWidget(QWidget):
         worker = self.connection_manager.connection_worker
         if worker:
             self.keithley = worker.get_instrument()
-            self.log_message(f"🔧 儀器實例已取得: {type(self.keithley).__name__} connected={getattr(self.keithley, 'connected', None)}")
-        else:
-            self.log_message("⚠️ 警告: connection_worker 為 None")
             
         # 更新UI狀態
         device_name = device_info.split('\n')[0] if device_info else ""
