@@ -18,8 +18,6 @@ from pyqtgraph import PlotWidget
 
 from src.rigol_dp711 import RigolDP711
 from src.data_logger import DataLogger
-from src.multi_device_manager import get_multi_device_manager, MultiDeviceManager
-from src.port_manager import DeviceInfo
 
 
 class RigolMeasurementWorker(QThread):
@@ -107,15 +105,7 @@ class RigolControlWidget(QWidget):
         
     def setup_device_management(self):
         """設置設備管理"""
-        # 連接多設備管理器信號
-        self.device_manager.device_list_changed.connect(self.update_device_list)
-        self.device_manager.active_device_changed.connect(self.on_active_device_changed)
-        self.device_manager.device_status_changed.connect(self.on_device_status_changed)
-        
-        # 開始監控端口
-        self.device_manager.start_monitoring()
-        
-        # 初始掃描
+        # 初始掃描端口
         self.scan_ports()
         
     def setup_ui(self):
@@ -403,7 +393,9 @@ class RigolControlWidget(QWidget):
             self.port_combo.clear()
             
             # 獲取可用設備
-            available_devices = self.device_manager.get_available_devices()
+            from src.port_manager import get_port_manager
+            port_manager = get_port_manager()
+            available_devices = port_manager.get_available_ports(exclude_connected=True)
             
             if available_devices:
                 for device_info in available_devices:
@@ -574,7 +566,9 @@ class RigolControlWidget(QWidget):
             # 解析設備選擇文本格式：[端口] - [設備ID] (活動中)
             if " - " in device_text:
                 port = device_text.split(" - ")[0]
-                if self.device_manager.set_active_device(port):
+                # 直接切換到指定端口的設備
+                if port in self.connected_devices:
+                    self.switch_active_device(port)
                     self.log_message(f"切換到設備: {device_text}")
                 else:
                     self.log_message(f"切換設備失敗: {port}")
@@ -605,51 +599,7 @@ class RigolControlWidget(QWidget):
                     self.device_combo.setCurrentIndex(i)
                     break
     
-    def on_active_device_changed(self, port, device_id):
-        """處理活動設備變更"""
-        if port and device_id:
-            # 獲取設備實例
-            device_tuple = self.device_manager.get_device_by_port(port)
-            if device_tuple:
-                device, device_info = device_tuple
-                self.current_device = (port, device, device_info)
-                
-                # 更新向後相容的 dp711 引用
-                self.dp711 = device
-                
-                # 啟用控制項
-                self.enable_controls(True)
-                
-                # 更新狀態顯示
-                self.device_info_label.setText(f"活動設備: {device_info.device_id}\n端口: {port}")
-                self.disconnect_btn.setEnabled(True)
-                
-                self.log_message(f"切換到設備: {device_id} ({port})")
-                
-                # 發送設備切換信號
-                self.device_switched.emit(port, device_id)
-                self.connection_changed.emit(True, f"{device_id}@{port}")
-        else:
-            # 無活動設備
-            self.current_device = None
-            self.dp711 = None
-            
-            # 停用控制項
-            self.enable_controls(False)
-            
-            # 更新狀態顯示
-            self.device_info_label.setText("狀態: 無設備連接")
-            self.disconnect_btn.setEnabled(False)
-            
-            self.connection_changed.emit(False, "")
     
-    def on_device_status_changed(self, device_id, connected):
-        """處理設備狀態變更"""
-        if connected:
-            self.log_message(f"設備 {device_id} 已連接")
-        else:
-            self.log_message(f"設備 {device_id} 已斷開")
-            
     def enable_controls(self, enabled):
         """啟用或停用控制項"""
         for control in self.all_controls:
@@ -809,7 +759,7 @@ class RigolControlWidget(QWidget):
                     'voltage': voltage,
                     'current': current,
                     'power': power,
-                    'device_id': self.current_device[2].device_id if self.current_device else 'unknown'
+                    'device_id': f'DP711_{self.active_device_port}' if self.active_device_port else 'unknown'
                 })
                 
         except Exception as e:
@@ -839,8 +789,8 @@ class RigolControlWidget(QWidget):
             if self.data_logger:
                 self.data_logger.stop_session()
                 
-            # 停止設備監控
-            self.device_manager.stop_monitoring()
+            # 斷開所有設備
+            self.disconnect_all_devices()
             
             self.logger.info("Rigol 控制 Widget 正常關閉")
             
