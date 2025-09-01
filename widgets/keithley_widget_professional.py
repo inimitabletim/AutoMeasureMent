@@ -108,15 +108,22 @@ class ContinuousMeasurementWorker(QThread):
         
     def run(self):
         """執行連續測量"""
+        measurement_count = 0
         while self.running:
             try:
                 if self.keithley and self.keithley.connected:
                     v, i, r, p = self.keithley.measure_all()
                     self.data_ready.emit(v, i, r, p)
+                    measurement_count += 1
+                    # 每10次測量輸出一次調試信息
+                    if measurement_count % 10 == 1:
+                        print(f"[DEBUG] 測量 #{measurement_count}: V={v:.6f}, I={i:.6f}, R={r:.2f}, P={p:.6f}")
                     self.msleep(500)  # 500ms間隔
                 else:
+                    print(f"[DEBUG] 儀器未連接或狀態異常: keithley={self.keithley}, connected={getattr(self.keithley, 'connected', False)}")
                     self.msleep(1000)
             except Exception as e:
+                print(f"[DEBUG] 測量錯誤: {e}")
                 self.error_occurred.emit(str(e))
                 break
                 
@@ -1187,6 +1194,9 @@ class ProfessionalKeithleyWidget(QWidget):
         worker = self.connection_manager.connection_worker
         if worker:
             self.keithley = worker.get_instrument()
+            self.log_message(f"🔧 儀器實例已取得: {type(self.keithley).__name__} connected={getattr(self.keithley, 'connected', None)}")
+        else:
+            self.log_message("⚠️ 警告: connection_worker 為 None")
             
         # 更新UI狀態
         device_name = device_info.split('\n')[0] if device_info else ""
@@ -1384,6 +1394,20 @@ class ProfessionalKeithleyWidget(QWidget):
     def start_continuous_measurement(self):
         """開始連續測量"""
         try:
+            # 檢查儀器連接狀態
+            if self.keithley is None:
+                self.log_message("❌ 錯誤: Keithley儀器未連接")
+                QMessageBox.warning(self, "連接錯誤", "請先連接Keithley 2461儀器")
+                return
+                
+            # 檢查儀器是否真的已連接
+            if not hasattr(self.keithley, 'connected') or not self.keithley.connected:
+                self.log_message("❌ 錯誤: Keithley儀器連接狀態異常")
+                QMessageBox.warning(self, "連接錯誤", "儀器連接狀態異常，請重新連接")
+                return
+                
+            self.log_message(f"✅ Keithley儀器狀態正常: {self.keithley}")
+            
             # 應用源設定
             self.apply_source_settings()
             
@@ -1399,6 +1423,7 @@ class ProfessionalKeithleyWidget(QWidget):
             self.log_message("▶️ 開始連續測量")
             
         except Exception as e:
+            self.log_message(f"❌ 連續測量啟動錯誤: {e}")
             raise Exception(f"連續測量啟動錯誤: {e}")
     
     def apply_source_settings(self):
@@ -1413,19 +1438,30 @@ class ProfessionalKeithleyWidget(QWidget):
             nplc = 10.0
         else:
             nplc = 1.0
-        self.keithley.set_measurement_speed(nplc)
+        
+        # 確保 keithley 儀器對象存在且已連接
+        if self.keithley is not None and hasattr(self.keithley, 'set_measurement_speed'):
+            try:
+                self.keithley.set_measurement_speed(nplc)
+            except Exception as e:
+                self.logger.warning(f"無法設置測量速度: {e}")
         
         if source_type == "電壓源":
             self.apply_voltage_source_settings()
         else:
             self.apply_current_source_settings()
             
-        # 開啟輸出
-        self.keithley.output_on()
+        # 開啟輸出 - 也需要檢查 keithley 對象
+        if self.keithley is not None:
+            self.keithley.output_on()
         self.log_message("⚡ 輸出已開啟")
     
     def apply_voltage_source_settings(self):
         """應用電壓源設定"""
+        # 檢查儀器連接狀態
+        if self.keithley is None:
+            self.logger.warning("Keithley儀器未連接，無法應用設定")
+            return
         # 獲取電壓值
         voltage_text = self.output_voltage.value_edit.text()
         voltage_unit = self.output_voltage.get_current_prefix()
@@ -1450,6 +1486,10 @@ class ProfessionalKeithleyWidget(QWidget):
         
     def apply_current_source_settings(self):
         """應用電流源設定"""
+        # 檢查儀器連接狀態
+        if self.keithley is None:
+            self.logger.warning("Keithley儀器未連接，無法應用設定")
+            return
         # 獲取電流值
         current_text = self.output_current.value_edit.text()
         current_unit = self.output_current.get_current_prefix()

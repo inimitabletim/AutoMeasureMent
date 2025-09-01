@@ -191,5 +191,9 @@ class ConnectionStateManager:
     def _on_connection_finished(self):
         """連線完成處理"""
         self.is_connecting = False
-        if self.connection_worker:
-            self.connection_worker = None
+        # 注意：不立即清空 connection_worker，讓調用方可以獲取儀器實例
+        # self.connection_worker 將在下次連接或明確清理時被替換
+    
+    def clear_connection_worker(self):
+        """明確清理連接工作器"""
+        self.connection_worker = None
