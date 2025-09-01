@@ -454,8 +454,18 @@ class ProfessionalKeithleyWidget(QWidget):
         
         layout.addWidget(QLabel("測量速度:"), 3, 0)
         self.measurement_speed_combo = QComboBox()
-        self.measurement_speed_combo.addItems(["快速 (0.1 NPLC)", "標準 (1.0 NPLC)", "精確 (10 NPLC)"])
-        self.measurement_speed_combo.setCurrentIndex(1)
+        self.measurement_speed_combo.addItems([
+            "超快速 (0.01 NPLC)",
+            "很快速 (0.05 NPLC)", 
+            "快速 (0.1 NPLC)",
+            "快速+ (0.2 NPLC)",
+            "平衡 (0.5 NPLC)",
+            "標準 (1.0 NPLC)", 
+            "穩定 (2.0 NPLC)",
+            "精密 (5.0 NPLC)",
+            "超精確 (10 NPLC)"
+        ])
+        self.measurement_speed_combo.setCurrentIndex(5)  # 預設為標準 (1.0 NPLC)
         layout.addWidget(self.measurement_speed_combo, 3, 1)
         
         self.source_params_layout.addWidget(group)
@@ -482,8 +492,18 @@ class ProfessionalKeithleyWidget(QWidget):
         
         layout.addWidget(QLabel("測量速度:"), 3, 0)
         self.measurement_speed_combo = QComboBox()
-        self.measurement_speed_combo.addItems(["快速 (0.1 NPLC)", "標準 (1.0 NPLC)", "精確 (10 NPLC)"])
-        self.measurement_speed_combo.setCurrentIndex(1)
+        self.measurement_speed_combo.addItems([
+            "超快速 (0.01 NPLC)",
+            "很快速 (0.05 NPLC)", 
+            "快速 (0.1 NPLC)",
+            "快速+ (0.2 NPLC)",
+            "平衡 (0.5 NPLC)",
+            "標準 (1.0 NPLC)", 
+            "穩定 (2.0 NPLC)",
+            "精密 (5.0 NPLC)",
+            "超精確 (10 NPLC)"
+        ])
+        self.measurement_speed_combo.setCurrentIndex(5)  # 預設為標準 (1.0 NPLC)
         layout.addWidget(self.measurement_speed_combo, 3, 1)
         
         self.source_params_layout.addWidget(group)
@@ -1424,12 +1444,26 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 設定測量速度
         speed_text = self.measurement_speed_combo.currentText()
-        if "0.1" in speed_text:
+        if "0.01" in speed_text:
+            nplc = 0.01
+        elif "0.05" in speed_text:
+            nplc = 0.05
+        elif "0.1" in speed_text:
             nplc = 0.1
+        elif "0.2" in speed_text:
+            nplc = 0.2
+        elif "0.5" in speed_text:
+            nplc = 0.5
+        elif "1.0" in speed_text:
+            nplc = 1.0
+        elif "2.0" in speed_text:
+            nplc = 2.0
+        elif "5.0" in speed_text:
+            nplc = 5.0
         elif "10" in speed_text:
             nplc = 10.0
         else:
-            nplc = 1.0
+            nplc = 1.0  # 預設值
         
         # 確保 keithley 儀器對象存在且已連接
         if self.keithley is not None and hasattr(self.keithley, 'set_measurement_speed'):
