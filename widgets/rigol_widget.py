@@ -431,25 +431,50 @@ class RigolControlWidget(QWidget):
         baudrate = int(self.baudrate_combo.currentText())
         
         try:
-            if self.device_manager.connect_device(port, baudrate):
+            # 直接創建並連接設備，不通過複雜的多設備管理器
+            self.dp711 = RigolDP711(port=port, baudrate=baudrate)
+            
+            if self.dp711.connect():
+                self.current_device = (port, self.dp711, None)
                 self.log_message(f"設備連接成功: {port}")
-                self.scan_ports()  # 重新掃描更新列表
+                self.log_message(f"設備資訊: {self.dp711.get_identity()}")
+                
+                # 更新UI狀態
+                self.connect_btn.setEnabled(False) 
+                self.disconnect_btn.setEnabled(True)
+                self.update_device_controls()
+                
+                QMessageBox.information(self, "連接成功", f"成功連接到 Rigol DP711\n端口: {port}")
             else:
                 QMessageBox.critical(self, "連接失敗", f"無法連接到 {port}")
                 self.log_message(f"連接失敗: {port}")
+                self.dp711 = None
                 
         except Exception as e:
             self.logger.error(f"連接設備時發生錯誤: {e}")
             QMessageBox.critical(self, "連接錯誤", f"連接過程中發生錯誤: {str(e)}")
+            self.dp711 = None
     
     def disconnect_current_device(self):
         """斷開當前設備"""
-        if self.current_device:
-            port, device, device_info = self.current_device
-            if self.device_manager.disconnect_device(port):
-                self.log_message(f"設備已斷開: {device_info.device_id}")
-            else:
-                self.log_message(f"斷開設備失敗: {port}")
+        if self.dp711:
+            try:
+                self.dp711.disconnect()
+                self.log_message("設備已斷開連接")
+                self.current_device = None
+                self.dp711 = None
+                
+                # 更新UI狀態
+                self.connect_btn.setEnabled(True)
+                self.disconnect_btn.setEnabled(False)
+                self.update_device_controls()
+                
+                QMessageBox.information(self, "斷開成功", "設備已斷開連接")
+            except Exception as e:
+                self.logger.error(f"斷開設備時發生錯誤: {e}")
+                QMessageBox.warning(self, "斷開失敗", f"斷開設備時發生錯誤: {str(e)}")
+        else:
+            QMessageBox.warning(self, "警告", "沒有已連接的設備")
     
     def disconnect_all_devices(self):
         """斷開所有設備"""
@@ -560,24 +585,22 @@ class RigolControlWidget(QWidget):
         
     def apply_settings(self):
         """應用設定到設備"""
-        if not self.current_device:
+        if not self.dp711:
             QMessageBox.warning(self, "警告", "沒有連接的設備")
             return
-            
-        port, device, device_info = self.current_device
         
         try:
             voltage = self.voltage_spin.value()
             current = self.current_spin.value()
             
-            device.set_voltage(voltage)
-            device.set_current_limit(current)
+            self.dp711.set_voltage(voltage)
+            self.dp711.set_current_limit(current)
             
             if self.ovp_enable.isChecked():
-                device.set_ovp(self.ovp_spin.value())
+                self.dp711.set_ovp(self.ovp_spin.value())
                 
             if self.ocp_enable.isChecked():
-                device.set_ocp(self.ocp_spin.value())
+                self.dp711.set_ocp(self.ocp_spin.value())
                 
             self.log_message(f"設定已應用: V={voltage}V, I={current}A")
             
@@ -587,19 +610,18 @@ class RigolControlWidget(QWidget):
             
     def toggle_output(self):
         """切換輸出狀態"""
-        if not self.current_device:
+        if not self.dp711:
+            QMessageBox.warning(self, "警告", "沒有連接的設備")
             return
-            
-        port, device, device_info = self.current_device
         
         try:
-            if device.is_output_on():
-                device.set_output(False)
+            if self.dp711.is_output_on():
+                self.dp711.set_output(False)
                 self.output_btn.setText("開啟輸出")
                 self.output_status.setStyleSheet("color: red; font-size: 20px;")
                 self.log_message("輸出已關閉")
             else:
-                device.set_output(True)
+                self.dp711.set_output(True)
                 self.output_btn.setText("關閉輸出")
                 self.output_status.setStyleSheet("color: green; font-size: 20px;")
                 self.log_message("輸出已開啟")
@@ -617,17 +639,15 @@ class RigolControlWidget(QWidget):
             
     def start_measurement(self):
         """開始測量"""
-        if not self.current_device:
+        if not self.dp711:
             QMessageBox.warning(self, "警告", "沒有連接的設備")
             return
             
-        port, device, device_info = self.current_device
-        
         try:
             if self.measurement_worker:
                 self.measurement_worker.stop_measurement()
                 
-            self.measurement_worker = RigolMeasurementWorker(device)
+            self.measurement_worker = RigolMeasurementWorker(self.dp711)
             self.measurement_worker.data_ready.connect(self.update_measurements)
             self.measurement_worker.error_occurred.connect(self.handle_measurement_error)
             
