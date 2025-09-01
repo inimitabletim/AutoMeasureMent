@@ -76,9 +76,13 @@ class MultiDeviceManager(QObject):
             # 嘗試連接
             if device.connect():
                 self.devices[port] = device
+                self.logger.info(f"DP711 實例連接成功: {port}")
                 
                 # 標記端口管理器中的設備為已連接
-                if self.port_manager.connect_device(port, baudrate):
+                port_manager_result = self.port_manager.connect_device(port, baudrate)
+                self.logger.info(f"PortManager 連接結果: {port_manager_result}")
+                
+                if port_manager_result:
                     device_info = self.port_manager.connected_devices.get(port)
                     if device_info:
                         self.device_info[port] = device_info
@@ -91,10 +95,19 @@ class MultiDeviceManager(QObject):
                         self.logger.info(f"DP711 設備連接成功: {port} - {device_info.device_id}")
                         self._update_device_list()
                         return True
+                else:
+                    self.logger.warning(f"PortManager 標記失敗，但設備實際已連接，保持連接狀態")
+                    # 不強制斷開，而是創建預設設備資訊
+                    device_info = DeviceInfo(port=port, device_type="DP711", device_id=f"DP711_{port}", is_connected=True)
+                    self.device_info[port] = device_info
+                    
+                    if self.active_device_port is None:
+                        self.set_active_device(port)
                         
-                # 如果端口管理器標記失敗，清理設備
-                device.disconnect()
-                del self.devices[port]
+                    self.device_status_changed.emit(device_info.device_id, True)
+                    self.logger.info(f"DP711 設備連接成功 (fallback): {port} - {device_info.device_id}")
+                    self._update_device_list()
+                    return True
                 
         except Exception as e:
             self.logger.error(f"連接設備 {port} 時發生錯誤: {e}")
