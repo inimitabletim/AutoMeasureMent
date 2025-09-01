@@ -7,7 +7,7 @@
 
 import threading
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
