@@ -52,8 +52,9 @@ class RigolDP711(PowerSupplyBase):
             # 建立 VISA 資源管理器
             self.resource_manager = pyvisa.ResourceManager()
             
-            # 嘗試連接設備
-            resource_name = f"ASRL{self.port}::INSTR"
+            # 嘗試連接設備 - 修正端口名稱格式
+            port_number = self.port.replace('COM', '') if 'COM' in self.port else self.port
+            resource_name = f"ASRL{port_number}::INSTR"
             self.instrument = self.resource_manager.open_resource(resource_name)
             
             # 設定串口參數
@@ -70,17 +71,22 @@ class RigolDP711(PowerSupplyBase):
             # 設定超時時間
             self.instrument.timeout = 5000  # 5 秒
             
-            # 驗證連接
-            identity = self.get_identity()
-            if "DP711" in identity or "RIGOL" in identity.upper():
-                self.connected = True
-                self.logger.info(f"成功連接到設備: {identity}")
-                
-                # 初始化設備
-                self._initialize_device()
-                return True
-            else:
-                self.logger.error(f"設備識別失敗: {identity}")
+            # 驗證連接 - 直接查詢而不依賴連接狀態
+            try:
+                identity = self.instrument.query("*IDN?").strip()
+                if "DP711" in identity or "RIGOL" in identity.upper():
+                    self.connected = True
+                    self.logger.info(f"成功連接到設備: {identity}")
+                    
+                    # 初始化設備
+                    self._initialize_device()
+                    return True
+                else:
+                    self.logger.error(f"設備識別失敗: {identity}")
+                    self.disconnect()
+                    return False
+            except Exception as e:
+                self.logger.error(f"設備識別查詢失敗: {e}")
                 self.disconnect()
                 return False
                 
