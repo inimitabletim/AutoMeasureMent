@@ -68,12 +68,10 @@ class RigolControlWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        # 多設備管理
-        self.device_manager = get_multi_device_manager()
-        self.current_device = None  # (port, device, device_info)
-        
-        # 單設備相容模式
-        self.dp711 = None  # 保持向後相容
+        # 多設備池管理
+        self.connected_devices = {}  # port -> RigolDP711 實例
+        self.active_device_port = None  # 當前活動設備端口
+        self.dp711 = None  # 當前活動設備實例 (向後相容)
         
         # 其他屬性
         self.data_logger = None
@@ -431,59 +429,140 @@ class RigolControlWidget(QWidget):
         baudrate = int(self.baudrate_combo.currentText())
         
         try:
-            # 直接創建並連接設備，不通過複雜的多設備管理器
-            self.dp711 = RigolDP711(port=port, baudrate=baudrate)
+            # 檢查是否已經連接此端口
+            if port in self.connected_devices:
+                # 切換到已連接的設備
+                self.active_device_port = port
+                self.dp711 = self.connected_devices[port]
+                self.log_message(f"切換到已連接設備: {port}")
+                self._update_device_ui()
+                return
             
-            if self.dp711.connect():
-                self.current_device = (port, self.dp711, None)
+            # 創建新設備連接
+            device = RigolDP711(port=port, baudrate=baudrate)
+            
+            if device.connect():
+                # 添加到設備池
+                self.connected_devices[port] = device
+                self.active_device_port = port
+                self.dp711 = device
+                
                 self.log_message(f"設備連接成功: {port}")
-                self.log_message(f"設備資訊: {self.dp711.get_identity()}")
+                self.log_message(f"設備資訊: {device.get_identity()}")
                 
-                # 更新UI狀態
-                self.connect_btn.setEnabled(False) 
-                self.disconnect_btn.setEnabled(True)
-                self.update_device_controls()
+                # 更新UI
+                self._update_device_ui()
+                self._update_device_list()
                 
-                QMessageBox.information(self, "連接成功", f"成功連接到 Rigol DP711\n端口: {port}")
+                QMessageBox.information(self, "連接成功", 
+                    f"成功連接到 Rigol DP711\n端口: {port}\n"
+                    f"總連接設備: {len(self.connected_devices)}台")
             else:
                 QMessageBox.critical(self, "連接失敗", f"無法連接到 {port}")
                 self.log_message(f"連接失敗: {port}")
-                self.dp711 = None
                 
         except Exception as e:
             self.logger.error(f"連接設備時發生錯誤: {e}")
             QMessageBox.critical(self, "連接錯誤", f"連接過程中發生錯誤: {str(e)}")
-            self.dp711 = None
     
     def disconnect_current_device(self):
         """斷開當前設備"""
-        if self.dp711:
-            try:
-                self.dp711.disconnect()
-                self.log_message("設備已斷開連接")
-                self.current_device = None
+        if not self.active_device_port or self.active_device_port not in self.connected_devices:
+            QMessageBox.warning(self, "警告", "沒有活動的設備")
+            return
+            
+        try:
+            port = self.active_device_port
+            device = self.connected_devices[port]
+            
+            device.disconnect()
+            
+            # 從設備池移除
+            del self.connected_devices[port]
+            
+            # 切換到其他設備或清空
+            if self.connected_devices:
+                # 切換到第一個可用設備
+                self.active_device_port = list(self.connected_devices.keys())[0]
+                self.dp711 = self.connected_devices[self.active_device_port]
+                self.log_message(f"設備 {port} 已斷開，切換到 {self.active_device_port}")
+            else:
+                # 沒有設備了
+                self.active_device_port = None
                 self.dp711 = None
+                self.log_message("所有設備已斷開")
                 
-                # 更新UI狀態
-                self.connect_btn.setEnabled(True)
-                self.disconnect_btn.setEnabled(False)
-                self.update_device_controls()
+            self._update_device_ui()
+            self._update_device_list()
+            
+            QMessageBox.information(self, "斷開成功", 
+                f"設備 {port} 已斷開\n剩餘設備: {len(self.connected_devices)}台")
                 
-                QMessageBox.information(self, "斷開成功", "設備已斷開連接")
-            except Exception as e:
-                self.logger.error(f"斷開設備時發生錯誤: {e}")
-                QMessageBox.warning(self, "斷開失敗", f"斷開設備時發生錯誤: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"斷開設備時發生錯誤: {e}")
+            QMessageBox.warning(self, "斷開失敗", f"斷開設備時發生錯誤: {str(e)}")
+            
+    def _update_device_ui(self):
+        """更新設備相關UI狀態"""
+        has_devices = len(self.connected_devices) > 0
+        has_active = self.dp711 is not None
+        
+        # 更新按鈕狀態
+        self.connect_btn.setEnabled(True)  # 總是可以添加新設備
+        self.disconnect_btn.setEnabled(has_active)
+        
+        # 更新設備控制區域
+        self.update_device_controls()
+        
+    def _update_device_list(self):
+        """更新設備列表顯示"""
+        # 這裡可以添加設備列表UI更新邏輯
+        if hasattr(self, 'device_list_combo'):
+            self.device_list_combo.clear()
+            for port, device in self.connected_devices.items():
+                active_mark = " (活動)" if port == self.active_device_port else ""
+                try:
+                    identity = device.get_identity()
+                    display_text = f"{port} - {identity.split(',')[0]}{active_mark}"
+                except:
+                    display_text = f"{port} - DP711{active_mark}"
+                self.device_list_combo.addItem(display_text, port)
+                
+    def switch_active_device(self, port: str):
+        """切換活動設備"""
+        if port in self.connected_devices:
+            self.active_device_port = port
+            self.dp711 = self.connected_devices[port]
+            self._update_device_ui()
+            self._update_device_list()
+            self.log_message(f"切換到設備: {port}")
         else:
-            QMessageBox.warning(self, "警告", "沒有已連接的設備")
-    
+            self.log_message(f"設備 {port} 未連接")
+            
     def disconnect_all_devices(self):
         """斷開所有設備"""
         try:
-            self.device_manager.disconnect_all_devices()
-            self.log_message("所有設備已斷開")
+            disconnected_count = 0
+            ports_to_disconnect = list(self.connected_devices.keys())
+            
+            for port in ports_to_disconnect:
+                device = self.connected_devices[port]
+                device.disconnect()
+                disconnected_count += 1
+                
+            self.connected_devices.clear()
+            self.active_device_port = None
+            self.dp711 = None
+            
+            self._update_device_ui()
+            self._update_device_list()
+            
+            self.log_message(f"已斷開所有設備 ({disconnected_count}台)")
+            QMessageBox.information(self, "斷開成功", f"已斷開所有設備 ({disconnected_count}台)")
+            
         except Exception as e:
             self.logger.error(f"斷開所有設備時發生錯誤: {e}")
-            self.log_message(f"斷開設備錯誤: {e}")
+            QMessageBox.warning(self, "斷開失敗", f"斷開設備時發生錯誤: {str(e)}")
     
     def switch_device(self, device_text):
         """切換當前設備"""
