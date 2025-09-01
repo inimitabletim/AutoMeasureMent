@@ -392,10 +392,11 @@ class RigolControlWidget(QWidget):
             # 清空現有選項
             self.port_combo.clear()
             
-            # 獲取可用設備
+            # 獲取可用設備 - 先執行掃描確保數據是最新的
             from src.port_manager import get_port_manager
             port_manager = get_port_manager()
-            available_devices = port_manager.get_available_ports(exclude_connected=True)
+            port_manager.scan_ports()  # 強制重新掃描
+            available_devices = port_manager.get_available_ports(exclude_connected=False)  # 暫時不排除已連接的
             
             if available_devices:
                 for device_info in available_devices:
