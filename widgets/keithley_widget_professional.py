@@ -232,7 +232,7 @@ class ProfessionalKeithleyWidget(QWidget):
         return control_widget
         
     def create_connection_group(self):
-        """創建增強的設備連接群組 - 支援非阻塞式連線"""
+        """創建增強的設備連接群組 - 支援非阻塞式連線 [v2.0]"""
         group = QGroupBox("🔌 設備連接")
         layout = QGridLayout(group)
         
@@ -251,11 +251,9 @@ class ProfessionalKeithleyWidget(QWidget):
         self.connection_status_widget.disconnection_requested.connect(self._handle_disconnection_request)
         self.connection_status_widget.connection_cancelled.connect(self._handle_connection_cancel)
         
-        # 保持向後相容性的連接按鈕（隱藏）
-        self.connect_btn = QPushButton("連接")
-        self.connect_btn.setVisible(False)
-        self.connection_status = QLabel("🔴 未連接")
-        self.connection_status.setVisible(False)
+        # 舊的連線UI元素已完全移除，僅保留變數以防程式崩潰
+        self.connect_btn = None  # 移除舊按鈕
+        self.connection_status = None  # 移除舊狀態標籤
         
         return group
         
@@ -1053,95 +1051,34 @@ class ProfessionalKeithleyWidget(QWidget):
     # ==================== 核心功能方法 ====================
     
     def connect_device(self):
-        """連接設備"""
-        if not self.keithley or not self.keithley.connected:
-            ip_address = self.ip_input.text().strip()
-            if not ip_address:
-                QMessageBox.warning(self, "錯誤", "請輸入IP地址")
-                return
-                
-            try:
-                self.keithley = Keithley2461(ip_address=ip_address)
-                if self.keithley.connect():
-                    self.connection_status.setText("🟢 已連接")
-                    self.connection_status.setStyleSheet("color: #27ae60; font-weight: bold;")
-                    self.connect_btn.setText("斷開連接")
-                    self.start_btn.setEnabled(True)
-                    
-                    self.log_message(f"✅ 成功連接到設備: {ip_address}")
-                    
-                    # 初始化增強型數據記錄器
-                    self.data_logger = EnhancedDataLogger(
-                        base_path="data",
-                        auto_save_interval=300,  # 5分鐘自動保存
-                        max_memory_points=5000   # 5000個數據點內存限制
-                    )
-                    
-                    # 連接數據系統信號
-                    self.data_logger.data_saved.connect(self.on_data_saved)
-                    self.data_logger.statistics_updated.connect(self.on_statistics_updated)
-                    self.data_logger.anomaly_detected.connect(self.on_anomaly_detected)
-                    self.data_logger.storage_warning.connect(self.on_storage_warning)
-                    
-                    # 準備會話配置
-                    instrument_config = {
-                        'instrument': 'Keithley 2461',
-                        'ip_address': ip_address,
-                        'connection_time': datetime.now().isoformat()
-                    }
-                    
-                    session_name = self.data_logger.start_session(
-                        description=f"Keithley 2461 測量會話 - {ip_address}",
-                        instrument_config=instrument_config
-                    )
-                    self.log_message(f"📊 開始增強型數據記錄會話: {session_name}")
-                    
-                    # 發送連接狀態信號
-                    self.connection_changed.emit(True, ip_address)
-                    
-                else:
-                    QMessageBox.critical(self, "連接失敗", f"無法連接到設備: {ip_address}")
-                    
-            except Exception as e:
-                QMessageBox.critical(self, "連接錯誤", f"連接過程中發生錯誤: {str(e)}")
-                self.log_message(f"❌ 連接錯誤: {e}")
+        """連接設備 - 統一使用非阻塞式連線機制"""
+        # 強制使用新的非阻塞式連線機制
+        if hasattr(self, '_handle_connection_request'):
+            self.log_message("🔄 使用非阻塞式連線機制")
+            self._handle_connection_request()
         else:
-            self.disconnect_device()
+            self.log_message("❌ 非阻塞式連線機制未初始化")
+            QMessageBox.critical(self, "系統錯誤", "連線系統未正確初始化，請重新啟動程式")
             
     def disconnect_device(self):
-        """斷開設備連接"""
-        try:
-            # 停止所有測量
-            self.stop_measurement()
-            
-            if self.keithley and self.keithley.connected:
-                self.keithley.output_off()
-                self.keithley.disconnect()
+        """斷開設備連接 - 統一使用非阻塞式連線機制"""
+        # 強制使用新的非阻塞式斷線機制
+        if hasattr(self, '_handle_disconnection_request'):
+            self.log_message("🔄 使用非阻塞式斷線機制")
+            self._handle_disconnection_request()
+        else:
+            # 基本斷線邏輯（後備方案）
+            try:
+                if self.keithley and self.keithley.connected:
+                    self.keithley.output_off()
+                    self.keithley.disconnect()
+                    
+                self.keithley = None
+                self.connection_changed.emit(False, "")
+                self.log_message("✅ 設備已斷開連接")
                 
-            self.keithley = None
-            
-            # 關閉數據記錄會話
-            if self.data_logger:
-                try:
-                    self.data_logger.close_session()
-                    self.data_logger = None
-                    self.log_message("📊 數據記錄會話已關閉")
-                except Exception as e:
-                    self.log_message(f"❌ 關閉數據會話錯誤: {e}")
-            
-            # 更新UI狀態
-            self.connection_status.setText("🔴 未連接")
-            self.connection_status.setStyleSheet("color: #e74c3c; font-weight: bold;")
-            self.connect_btn.setText("連接")
-            self.start_btn.setEnabled(False)
-            self.stop_btn.setEnabled(False)
-            
-            # 發送連接狀態信號
-            self.connection_changed.emit(False, "")
-            self.log_message("🔌 設備已斷開連接")
-            
-        except Exception as e:
-            self.log_message(f"❌ 斷開連接時發生錯誤: {e}")
+            except Exception as e:
+                self.log_message(f"❌ 斷開連接時發生錯誤: {e}")
     
     # ==================== 新的非阻塞式連線方法 ====================
     
@@ -1334,10 +1271,7 @@ class ProfessionalKeithleyWidget(QWidget):
         elif hasattr(self, 'connection_status_widget'):
             status_text = self.connection_status_widget.status_text.text()
             is_connected = "已連接" in status_text
-        # 最後檢查舊的連線狀態標籤
-        elif hasattr(self, 'connection_status'):
-            status_text = self.connection_status.text()
-            is_connected = "已連接" in status_text
+        # 舊的連線狀態標籤已移除
             
         if not is_connected:
             # 添加詳細的調試信息
@@ -1353,9 +1287,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 status_text = self.connection_status_widget.status_text.text()
                 debug_info.append(f"新狀態widget: {status_text}")
             
-            if hasattr(self, 'connection_status'):
-                status_text = self.connection_status.text()
-                debug_info.append(f"舊狀態標籤: {status_text}")
+            # 舊狀態標籤已移除，跳過檢查
                 
             self.log_message(f"🔍 連線狀態檢查: {'; '.join(debug_info)}")
             QMessageBox.warning(self, "警告", "請先連接設備")
