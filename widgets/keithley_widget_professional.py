@@ -243,13 +243,25 @@ class ProfessionalKeithleyWidget(QWidget):
         layout.addWidget(self.ip_input, 0, 1)
         
         # 使用增強的連線狀態Widget
-        self.connection_status_widget = ConnectionStatusWidget()
-        layout.addWidget(self.connection_status_widget, 1, 0, 1, 2)
+        try:
+            self.connection_status_widget = ConnectionStatusWidget()
+            layout.addWidget(self.connection_status_widget, 1, 0, 1, 2)
+            # 成功創建，不輸出避免編碼問題
+        except Exception as e:
+            # 如果創建失敗，使用簡單的替代UI
+            self.connection_status_widget = QLabel("連線狀態載入中...")
+            layout.addWidget(self.connection_status_widget, 1, 0, 1, 2)
+            # 記錄錯誤到日誌而不是控制台
+            if hasattr(self, 'logger'):
+                self.logger.error(f"創建連線狀態Widget失敗: {e}")
         
-        # 連接信號
-        self.connection_status_widget.connection_requested.connect(self._handle_connection_request)
-        self.connection_status_widget.disconnection_requested.connect(self._handle_disconnection_request)
-        self.connection_status_widget.connection_cancelled.connect(self._handle_connection_cancel)
+        # 連接信號（僅當widget創建成功時）
+        if hasattr(self.connection_status_widget, 'connection_requested'):
+            self.connection_status_widget.connection_requested.connect(self._handle_connection_request)
+            self.connection_status_widget.disconnection_requested.connect(self._handle_disconnection_request)
+            self.connection_status_widget.connection_cancelled.connect(self._handle_connection_cancel)
+        else:
+            print("⚠️ 連線狀態Widget信號連接失敗，使用舊連線機制")
         
         # 舊的連線UI元素已完全移除，僅保留變數以防程式崩潰
         self.connect_btn = None  # 移除舊按鈕
