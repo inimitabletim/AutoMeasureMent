@@ -50,6 +50,8 @@ wheels/
 # 數據檔案（可選，視需求決定是否版本控制）
 data/*.csv
 data/*.json
+data/*.db
+data/measurement_data.db
 data/session_*
 
 # 暫存檔
