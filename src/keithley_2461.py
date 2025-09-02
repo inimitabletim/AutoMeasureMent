@@ -260,30 +260,26 @@ class Keithley2461(SourceMeterBase):
         
     def measure_all(self) -> Tuple[float, float, float, float]:
         """
-        同時測量電壓、電流、電阻和功率
+        同時測量電壓、電流、電阻和功率 - 優化版本
         
         Returns:
             Tuple[float, float, float, float]: (電壓, 電流, 電阻, 功率)
         """
-        # 使用一次查詢獲取所有數據以提高效率
-        response = self.query(":READ?")
-        values = [float(x) for x in response.split(',')]
+        # 優化策略：直接查詢電壓和電流，避免冗餘的READ查詢
+        # 因為READ?在當前配置下只返回單一值
         
-        if len(values) >= 4:
-            voltage, current, resistance, power = values[:4]
+        # 執行兩次必要的查詢
+        voltage = self.measure_voltage()
+        current = self.measure_current()
+        
+        # 計算衍生值
+        if current != 0:
+            resistance = voltage / current
         else:
-            # 優化的備用方案：減少 I/O 操作
-            voltage = self.measure_voltage()
-            current = self.measure_current()
+            resistance = float('inf')  # 電流為 0 時電阻為無窮大
             
-            # 直接計算電阻和功率，避免額外的 I/O 操作
-            if current != 0:
-                resistance = voltage / current
-            else:
-                resistance = float('inf')  # 電流為 0 時電阻為無窮大
-                
-            power = voltage * current
-            
+        power = voltage * current
+        
         self.logger.debug(f"全測量 - V:{voltage}V, I:{current}A, R:{resistance}Ω, P:{power}W")
         return voltage, current, resistance, power
         
