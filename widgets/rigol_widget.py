@@ -18,6 +18,7 @@ from pyqtgraph import PlotWidget
 
 from src.rigol_dp711 import RigolDP711
 from src.data_logger import DataLogger
+from src.connection_worker import InstrumentConnectionWorker, ConnectionStateManager
 
 
 class RigolMeasurementWorker(QThread):
@@ -70,6 +71,10 @@ class RigolControlWidget(QWidget):
         self.connected_devices = {}  # port -> RigolDP711 實例
         self.active_device_port = None  # 當前活動設備端口
         self.dp711 = None  # 當前活動設備實例 (向後相容)
+        
+        # 連接管理
+        self.connection_manager = ConnectionStateManager()
+        self.connection_worker = None  # 當前的連接工作線程
         
         # 其他屬性
         self.data_logger = None
@@ -413,7 +418,7 @@ class RigolControlWidget(QWidget):
             self.log_message(f"端口掃描錯誤: {e}")
     
     def connect_new_device(self):
-        """連接新設備"""
+        """連接新設備 - 使用模組化非阻塞連接"""
         if self.port_combo.count() == 0 or self.port_combo.currentData() is None:
             QMessageBox.warning(self, "警告", "請先掃描端口並選擇一個有效的端口")
             return
@@ -421,42 +426,117 @@ class RigolControlWidget(QWidget):
         port = self.port_combo.currentData()
         baudrate = int(self.baudrate_combo.currentText())
         
-        try:
-            # 檢查是否已經連接此端口
-            if port in self.connected_devices:
-                # 切換到已連接的設備
-                self.active_device_port = port
-                self.dp711 = self.connected_devices[port]
-                self.log_message(f"切換到已連接設備: {port}")
-                self._update_device_ui()
-                return
+        # 檢查是否已經連接此端口
+        if port in self.connected_devices:
+            # 切換到已連接的設備
+            self.active_device_port = port
+            self.dp711 = self.connected_devices[port]
+            self.log_message(f"切換到已連接設備: {port}")
+            self._update_device_ui()
+            return
+        
+        # 檢查是否正在連接中
+        if self.connection_manager.is_connecting:
+            QMessageBox.warning(self, "警告", "正在連接中，請稍後...")
+            return
+        
+        # 設置連接狀態
+        self.connection_manager.is_connecting = True
+        
+        # 禁用連接按鈕，顯示連接狀態
+        self.connect_btn.setEnabled(False)
+        self.connect_btn.setText("連接中...")
+        self.log_message(f"正在連接到 {port}...")
+        
+        # 創建連接參數
+        connection_params = {
+            'port': port,
+            'baudrate': baudrate,
+            'timeout': 5.0  # 5秒超時
+        }
+        
+        # 創建並配置連接工作線程
+        self.connection_worker = InstrumentConnectionWorker('rigol', connection_params)
+        
+        # 連接信號到對應的處理方法
+        self.connection_worker.connection_started.connect(self.on_connection_started)
+        self.connection_worker.connection_progress.connect(self.on_connection_progress)
+        self.connection_worker.connection_success.connect(self.on_connection_success)
+        self.connection_worker.connection_failed.connect(self.on_connection_failed)
+        self.connection_worker.connection_timeout.connect(self.on_connection_timeout)
+        
+        # 連接完成信號
+        self.connection_worker.finished.connect(self.on_connection_finished)
+        
+        # 啟動連接線程
+        self.connection_worker.start()
+    
+    # 連接狀態回調方法
+    def on_connection_started(self):
+        """連接開始時的回調"""
+        self.log_message("開始建立連接...")
+        
+    def on_connection_progress(self, message: str):
+        """連接進度更新的回調"""
+        self.log_message(f"連接進度: {message}")
+        # 可以更新狀態標籤或進度條
+        if hasattr(self, 'device_info_label'):
+            self.device_info_label.setText(f"⏳ {message}")
             
-            # 創建新設備連接
-            device = RigolDP711(port=port, baudrate=baudrate)
-            
-            if device.connect():
+    def on_connection_success(self, message: str):
+        """連接成功的回調"""
+        if self.connection_worker:
+            # 獲取連接成功的儀器實例
+            device = self.connection_worker.get_instrument()
+            if device:
+                # 獲取連接參數
+                port = self.port_combo.currentData()
+                
                 # 添加到設備池
                 self.connected_devices[port] = device
                 self.active_device_port = port
                 self.dp711 = device
                 
-                self.log_message(f"設備連接成功: {port}")
-                self.log_message(f"設備資訊: {device.get_identity()}")
+                # 記錄成功訊息
+                self.log_message(f"✓ 連接成功: {port}")
+                self.log_message(message)
                 
                 # 更新UI
                 self._update_device_ui()
                 self._update_device_list()
                 
-                QMessageBox.information(self, "連接成功", 
-                    f"成功連接到 Rigol DP711\n端口: {port}\n"
-                    f"總連接設備: {len(self.connected_devices)}台")
-            else:
-                QMessageBox.critical(self, "連接失敗", f"無法連接到 {port}")
-                self.log_message(f"連接失敗: {port}")
+                # 顯示輕量提示而非彈窗
+                self.device_info_label.setText(f"✓ 已連接: {port}")
                 
-        except Exception as e:
-            self.logger.error(f"連接設備時發生錯誤: {e}")
-            QMessageBox.critical(self, "連接錯誤", f"連接過程中發生錯誤: {str(e)}")
+    def on_connection_failed(self, error_message: str):
+        """連接失敗的回調"""
+        self.log_message(f"✗ 連接失敗: {error_message}")
+        QMessageBox.warning(self, "連接失敗", error_message)
+        
+    def on_connection_timeout(self):
+        """連接超時的回調"""
+        self.log_message("連接超時，請檢查設備是否正常")
+        QMessageBox.warning(self, "連接超時", 
+            "連接超時，請檢查：\n"
+            "1. 設備是否已開機\n"
+            "2. USB 線是否正確連接\n"
+            "3. 驅動程式是否已安裝")
+            
+    def on_connection_finished(self):
+        """連接過程結束的回調（無論成功或失敗）"""
+        # 恢復按鈕狀態
+        self.connect_btn.setEnabled(True)
+        self.connect_btn.setText("連接設備")
+        
+        # 重置連接狀態
+        self.connection_manager.is_connecting = False
+        
+        # 清理工作線程引用
+        if self.connection_worker:
+            self.connection_worker.deleteLater()
+            self.connection_worker = None
+            
+        self.log_message("連接過程完成")
     
     def disconnect_current_device(self):
         """斷開當前設備"""
