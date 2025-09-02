@@ -1954,8 +1954,30 @@ class ProfessionalKeithleyWidget(QWidget):
             cursor.movePosition(cursor.MoveOperation.End)
             self.log_text.setTextCursor(cursor)
         
-        # 同時輸出到控制台日誌
-        self.logger.info(message)
+        # 同時輸出到控制台日誌（移除emoji以避免編碼錯誤）
+        # 定義emoji替換對應表
+        console_message = message
+        emoji_replacements = {
+            '✅': '[OK]',
+            '❌': '[ERROR]',
+            '⚠️': '[WARNING]',
+            '📊': '[DATA]',
+            '⏹️': '[STOP]',
+            '▶️': '[START]',
+            '⚡': '[POWER]',
+            '🔴': '[OFF]',
+            '🟢': '[ON]',
+            '🔧': '[CONFIG]',
+            '📈': '[CHART]',
+            '💾': '[SAVE]',
+            '🔌': '[CONNECT]'
+        }
+        
+        # 替換所有emoji
+        for emoji, replacement in emoji_replacements.items():
+            console_message = console_message.replace(emoji, replacement)
+        
+        self.logger.info(console_message)
 
     def set_theme(self, theme):
         """設置主題"""
