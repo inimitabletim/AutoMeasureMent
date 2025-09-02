@@ -24,6 +24,7 @@ from src.keithley_2461 import Keithley2461
 from src.enhanced_data_system import EnhancedDataLogger
 from widgets.unit_input_widget import UnitInputWidget, UnitDisplayWidget
 from widgets.connection_status_widget import ConnectionStatusWidget
+from widgets.floating_settings_panel import FloatingSettingsPanel
 from src.connection_worker import ConnectionStateManager
 
 
@@ -171,6 +172,10 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 統計數據緩存
         self._last_avg_voltage = None
+        
+        # 懸浮設定面板
+        self.floating_settings = None
+        self.instrument_settings = {}
         
         self.setup_ui()
         
@@ -383,6 +388,25 @@ class ProfessionalKeithleyWidget(QWidget):
         
         layout.addLayout(button_layout)
         
+        # 詳細設置按鈕
+        self.advanced_settings_btn = QPushButton("⚙️ 詳細設置")
+        self.advanced_settings_btn.clicked.connect(self.open_advanced_settings)
+        self.advanced_settings_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 5px;
+                font-size: 12px;
+                margin-top: 10px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        layout.addWidget(self.advanced_settings_btn)
+        
         # 進度條
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
@@ -433,78 +457,50 @@ class ProfessionalKeithleyWidget(QWidget):
         self.smart_chart_switching(source_type)
             
     def create_voltage_source_params(self):
-        """創建電壓源參數"""
-        group = QGroupBox("🔋 電壓源參數")
+        """創建電壓源參數 - 簡化版本"""
+        group = QGroupBox("🔋 電壓源設置")
         layout = QGridLayout(group)
         
+        # 基本電壓設置
         layout.addWidget(QLabel("輸出電壓:"), 0, 0)
         self.output_voltage = UnitInputWidget("V", "", 6)
         self.output_voltage.set_base_value(5.0)
         layout.addWidget(self.output_voltage, 0, 1)
         
+        # 電流限制設置
         layout.addWidget(QLabel("電流限制:"), 1, 0)
         self.current_limit = UnitInputWidget("A", "m", 3)
         self.current_limit.set_base_value(0.1)
         layout.addWidget(self.current_limit, 1, 1)
         
-        layout.addWidget(QLabel("電壓範圍:"), 2, 0)
-        self.voltage_range_combo = QComboBox()
-        self.voltage_range_combo.addItems(["自動", "20V", "200V"])
-        layout.addWidget(self.voltage_range_combo, 2, 1)
-        
-        layout.addWidget(QLabel("測量速度:"), 3, 0)
-        self.measurement_speed_combo = QComboBox()
-        self.measurement_speed_combo.addItems([
-            "超快速 (0.01 NPLC)",
-            "很快速 (0.05 NPLC)", 
-            "快速 (0.1 NPLC)",
-            "快速+ (0.2 NPLC)",
-            "平衡 (0.5 NPLC)",
-            "標準 (1.0 NPLC)", 
-            "穩定 (2.0 NPLC)",
-            "精密 (5.0 NPLC)",
-            "超精確 (10 NPLC)"
-        ])
-        self.measurement_speed_combo.setCurrentIndex(5)  # 預設為標準 (1.0 NPLC)
-        layout.addWidget(self.measurement_speed_combo, 3, 1)
+        # 輸出開關
+        self.output_enable_checkbox = QCheckBox("開啟電源輸出")
+        self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
+        layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
         
         self.source_params_layout.addWidget(group)
         
     def create_current_source_params(self):
-        """創建電流源參數"""
-        group = QGroupBox("⚡ 電流源參數")
+        """創建電流源參數 - 簡化版本"""
+        group = QGroupBox("⚡ 電流源設置")
         layout = QGridLayout(group)
         
+        # 基本電流設置
         layout.addWidget(QLabel("輸出電流:"), 0, 0)
         self.output_current = UnitInputWidget("A", "m", 6)
         self.output_current.set_base_value(0.01)
         layout.addWidget(self.output_current, 0, 1)
         
+        # 電壓限制設置
         layout.addWidget(QLabel("電壓限制:"), 1, 0)
         self.voltage_limit = UnitInputWidget("V", "", 3)
         self.voltage_limit.set_base_value(21.0)
         layout.addWidget(self.voltage_limit, 1, 1)
         
-        layout.addWidget(QLabel("電流範圍:"), 2, 0)
-        self.current_range_combo = QComboBox()
-        self.current_range_combo.addItems(["自動", "1mA", "10mA", "100mA", "1A"])
-        layout.addWidget(self.current_range_combo, 2, 1)
-        
-        layout.addWidget(QLabel("測量速度:"), 3, 0)
-        self.measurement_speed_combo = QComboBox()
-        self.measurement_speed_combo.addItems([
-            "超快速 (0.01 NPLC)",
-            "很快速 (0.05 NPLC)", 
-            "快速 (0.1 NPLC)",
-            "快速+ (0.2 NPLC)",
-            "平衡 (0.5 NPLC)",
-            "標準 (1.0 NPLC)", 
-            "穩定 (2.0 NPLC)",
-            "精密 (5.0 NPLC)",
-            "超精確 (10 NPLC)"
-        ])
-        self.measurement_speed_combo.setCurrentIndex(5)  # 預設為標準 (1.0 NPLC)
-        layout.addWidget(self.measurement_speed_combo, 3, 1)
+        # 輸出開關
+        self.output_enable_checkbox = QCheckBox("開啟電源輸出")
+        self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
+        layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
         
         self.source_params_layout.addWidget(group)
         
@@ -1238,6 +1234,37 @@ class ProfessionalKeithleyWidget(QWidget):
         
         self.log_message(f"❌ 連線失敗: {error_message}")
         
+    def toggle_output(self, checked: bool):
+        """切換電源輸出狀態"""
+        if not self.keithley or not self.keithley.is_connected():
+            self.output_enable_checkbox.setChecked(False)
+            QMessageBox.warning(self, "無法操作", "請先連接儀器")
+            return
+            
+        try:
+            if checked:
+                # 開啟輸出前設置參數
+                source_type = self.source_type_combo.currentText()
+                if source_type == "電壓源":
+                    voltage = self.output_voltage.get_base_value()
+                    current_limit = self.current_limit.get_base_value()
+                    self.keithley.set_voltage(voltage, current_limit=current_limit)
+                else:
+                    current = self.output_current.get_base_value() 
+                    voltage_limit = self.voltage_limit.get_base_value()
+                    self.keithley.set_current(current, voltage_limit=voltage_limit)
+                    
+                self.keithley.output_on()
+                self.log_message(f"✅ 電源輸出已開啟")
+            else:
+                self.keithley.output_off()
+                self.log_message(f"⚠️ 電源輸出已關閉")
+                
+        except Exception as e:
+            self.output_enable_checkbox.setChecked(False)
+            self.log_message(f"❌ 電源輸出控制失敗: {str(e)}")
+            QMessageBox.critical(self, "輸出控制錯誤", f"無法控制電源輸出:\n{str(e)}")
+        
     def _initialize_enhanced_data_logger(self):
         """初始化增強版數據記錄器"""
         try:
@@ -1442,28 +1469,18 @@ class ProfessionalKeithleyWidget(QWidget):
         """應用源設定"""
         source_type = self.source_type_combo.currentText()
         
-        # 設定測量速度
-        speed_text = self.measurement_speed_combo.currentText()
-        if "0.01" in speed_text:
-            nplc = 0.01
-        elif "0.05" in speed_text:
-            nplc = 0.05
-        elif "0.1" in speed_text:
-            nplc = 0.1
-        elif "0.2" in speed_text:
-            nplc = 0.2
-        elif "0.5" in speed_text:
-            nplc = 0.5
-        elif "1.0" in speed_text:
-            nplc = 1.0
-        elif "2.0" in speed_text:
-            nplc = 2.0
-        elif "5.0" in speed_text:
-            nplc = 5.0
-        elif "10" in speed_text:
-            nplc = 10.0
+        # 設定測量速度 - 從儀器設置中獲取或使用預設值
+        integration_time = self.instrument_settings.get('integration_time', '標準 (1.0 NPLC)')
+        
+        # 根據積分時間設置NPLC值
+        if "0.001" in integration_time or "快速 (1ms)" in integration_time:
+            nplc = 0.01  # 1ms對應約0.6NPLC@60Hz，使用0.01作為快速模式
+        elif "0.01" in integration_time or "中等 (10ms)" in integration_time:
+            nplc = 0.5   # 10ms對應約0.6NPLC@60Hz
+        elif "0.1" in integration_time or "慢速 (100ms)" in integration_time:
+            nplc = 5.0   # 100ms對應約6NPLC@60Hz
         else:
-            nplc = 1.0  # 預設值
+            nplc = 1.0   # 預設值：標準速度
         
         # 確保 keithley 儀器對象存在且已連接
         if self.keithley is not None and hasattr(self.keithley, 'set_measurement_speed'):
@@ -1498,10 +1515,11 @@ class ProfessionalKeithleyWidget(QWidget):
         current_limit_unit = self.current_limit.get_current_prefix()
         current_limit_str = f"{current_limit_text}{current_limit_unit}" if current_limit_unit else current_limit_text
         
-        # 設定範圍
-        voltage_range = self.voltage_range_combo.currentText()
+        # 設定範圍 - 從儀器設置中獲取或使用預設值
+        voltage_range = self.instrument_settings.get('voltage_range', '自動')
         if voltage_range != "自動":
-            range_value = voltage_range.replace("V", "")
+            # 解析範圍值 (如 "±20V" -> "20")
+            range_value = voltage_range.replace("±", "").replace("V", "")
             self.keithley.send_command(f":SOUR:VOLT:RANG {range_value}")
         else:
             self.keithley.send_command(":SOUR:VOLT:RANG:AUTO ON")
@@ -1526,11 +1544,16 @@ class ProfessionalKeithleyWidget(QWidget):
         voltage_limit_unit = self.voltage_limit.get_current_prefix()
         voltage_limit_str = f"{voltage_limit_text}{voltage_limit_unit}" if voltage_limit_unit else voltage_limit_text
         
-        # 設定範圍
-        current_range = self.current_range_combo.currentText()
+        # 設定範圍 - 從儀器設置中獲取或使用預設值
+        current_range = self.instrument_settings.get('current_range', '自動')
         if current_range != "自動":
-            range_value = current_range.replace("A", "").replace("mA", "m")
-            range_converted = self.keithley._convert_unit_format(range_value)
+            # 解析範圍值 (如 "±1A" -> "1", "±100mA" -> "0.1")
+            if "mA" in current_range:
+                range_value = current_range.replace("±", "").replace("mA", "")
+                range_converted = f"{float(range_value)/1000}"
+            else:
+                range_value = current_range.replace("±", "").replace("A", "")
+                range_converted = range_value
             self.keithley.send_command(f":SOUR:CURR:RANG {range_converted}")
         else:
             self.keithley.send_command(":SOUR:CURR:RANG:AUTO ON")
@@ -1996,3 +2019,59 @@ class ProfessionalKeithleyWidget(QWidget):
                 
         except Exception as e:
             self.logger.error(f"更新圖表主題失敗: {e}")
+            
+    def open_advanced_settings(self):
+        """打開詳細設置面板"""
+        if self.floating_settings is None:
+            self.floating_settings = FloatingSettingsPanel(self, self.instrument_settings)
+            self.floating_settings.settings_applied.connect(self.apply_advanced_settings)
+        
+        # 顯示懸浮面板
+        result = self.floating_settings.exec()
+        if result == self.floating_settings.DialogCode.Accepted:
+            self.logger.info("詳細設置已應用")
+            
+    def apply_advanced_settings(self, settings: Dict[str, Any]):
+        """應用詳細設置到儀器"""
+        try:
+            self.instrument_settings.update(settings)
+            
+            if self.keithley and self.keithley.is_connected():
+                # 應用電壓設置
+                if 'voltage_range' in settings:
+                    range_map = {'自動': 'AUTO', '±20V': '20', '±200V': '200'}
+                    if settings['voltage_range'] in range_map:
+                        self.keithley.write_command(f":SENS:VOLT:RANG {range_map[settings['voltage_range']]}")
+                        
+                # 應用電流設置  
+                if 'current_range' in settings:
+                    range_map = {'自動': 'AUTO', '±100mA': '0.1', '±1A': '1', '±7A': '7'}
+                    if settings['current_range'] in range_map:
+                        self.keithley.write_command(f":SENS:CURR:RANG {range_map[settings['current_range']]}")
+                        
+                # 應用積分時間
+                if 'integration_time' in settings:
+                    time_map = {
+                        '快速 (1ms)': '0.001',
+                        '中等 (10ms)': '0.01', 
+                        '慢速 (100ms)': '0.1'
+                    }
+                    if settings['integration_time'] in time_map:
+                        nplc = float(time_map[settings['integration_time']]) * 60  # 假設60Hz電源頻率
+                        self.keithley.write_command(f":SENS:VOLT:NPLC {nplc}")
+                        self.keithley.write_command(f":SENS:CURR:NPLC {nplc}")
+                        
+                # 應用安全設置
+                if settings.get('auto_output_off', True):
+                    # 設置儀器在斷開連接時自動關閉輸出
+                    pass  # 這個在斷開連接時處理
+                    
+                self.logger.info("詳細設置已成功應用到儀器")
+                
+        except Exception as e:
+            self.logger.error(f"應用詳細設置失敗: {e}")
+            QMessageBox.warning(self, "設置錯誤", f"應用設置時發生錯誤:\n{str(e)}")
+            
+    def get_current_settings(self) -> Dict[str, Any]:
+        """獲取當前儀器設置"""
+        return self.instrument_settings.copy()
