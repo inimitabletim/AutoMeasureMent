@@ -25,7 +25,7 @@ from src.enhanced_data_system import EnhancedDataLogger
 from widgets.unit_input_widget import UnitInputWidget, UnitDisplayWidget
 from widgets.connection_status_widget import ConnectionStatusWidget
 from widgets.floating_settings_panel import FloatingSettingsPanel
-from src.connection_worker import ConnectionStateManager
+# from src.connection_worker import ConnectionStateManager  # 已整合到統一系統
 
 
 class SweepMeasurementWorker(QThread):
