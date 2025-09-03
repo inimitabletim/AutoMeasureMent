@@ -476,7 +476,7 @@ class ProfessionalKeithleyWidget(QWidget):
             
     def create_voltage_source_params(self):
         """創建電壓源參數 - 簡化版本"""
-        group = QGroupBox("🔋 電壓源設置")
+        group = QGroupBox("🔋 電源設置")
         layout = QGridLayout(group)
         
         # 基本電壓設置
@@ -594,7 +594,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.voltage_unit_label = QLabel("V")
-        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 16px; margin-left: 3px;")
+        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 18px; margin-left: 3px;")
         self.voltage_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         voltage_layout.addWidget(self.voltage_unit_label)
         
@@ -621,7 +621,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.current_unit_label = QLabel("A")
-        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 16px; margin-left: 3px;")
+        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 18px; margin-left: 3px;")
         self.current_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         current_layout.addWidget(self.current_unit_label)
         
@@ -648,7 +648,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.power_unit_label = QLabel("W")
-        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 16px; margin-left: 3px;")
+        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 18px; margin-left: 3px;")
         self.power_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         power_layout.addWidget(self.power_unit_label)
         
@@ -675,7 +675,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.resistance_unit_label = QLabel("Ω")
-        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 16px; margin-left: 3px;")
+        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 18px; margin-left: 3px;")
         self.resistance_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         resistance_layout.addWidget(self.resistance_unit_label)
         
@@ -1216,7 +1216,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def toggle_output(self, checked: bool):
         """切換電源輸出狀態"""
         if not self.keithley or not self.keithley.is_connected():
-            self.output_enable_checkbox.setChecked(False)
+            self.output_enable_checkbox.setChecked(True)
             QMessageBox.warning(self, "無法操作", "請先連接儀器")
             return
             
