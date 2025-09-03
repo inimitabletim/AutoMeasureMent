@@ -412,6 +412,23 @@ class ProfessionalKeithleyWidget(QWidget):
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
         
+        # 測量狀態指示器
+        self.measurement_status = QLabel("⏸️ 待機中")
+        self.measurement_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.measurement_status.setStyleSheet("""
+            QLabel {
+                font-weight: bold;
+                font-size: 12px;
+                color: #2c3e50;
+                background-color: #ecf0f1;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                padding: 5px 10px;
+                margin-top: 5px;
+            }
+        """)
+        layout.addWidget(self.measurement_status)
+        
         return group
         
     def create_data_management_group(self):
@@ -669,52 +686,14 @@ class ProfessionalKeithleyWidget(QWidget):
         values_layout.setColumnStretch(2, 1)  # 功率群組
         values_layout.setColumnStretch(3, 1)  # 電阻群組
         
-        # 狀態信息 - 使用專業的居中顯示設計
-        # 創建狀態容器以實現更好的控制
-        status_container = QWidget()
-        status_layout = QHBoxLayout(status_container)
-        status_layout.setContentsMargins(10, 5, 10, 5)
-        
-        # 測量狀態 - 居中對齊，響應式字體，更醒目的顏色
-        self.measurement_status = QLabel("⏸️ 待機中")
-        self.measurement_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.measurement_status.setStyleSheet("""
-            QLabel {
-                font-weight: bold;
-                font-size: 18px;
-                color: #2c3e50;
-                background-color: #ecf0f1;
-                border: 2px solid #95a5a6;
-                border-radius: 8px;
-                padding: 8px 15px;
-                min-height: 25px;
-            }
-        """)
-        self.measurement_status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        
-        # 分隔符
-        separator = QLabel("|")
-        separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        separator.setStyleSheet("color: #95a5a6; font-size: 20px; font-weight: bold;")
-        
-        # 移除重複的數據點標籤，統一使用狀態欄顯示
-        
-        # 添加到水平佈局
-        status_layout.addWidget(self.measurement_status, 1)
-        status_layout.addWidget(separator)
-        # 數據點計數統一在狀態欄顯示，不再需要單獨標籤
-        
-        # 將狀態容器添加到 GroupBox 佈局
-        values_layout.addWidget(status_container, 1, 0, 1, 12)  # 跨越所有列
-        
-        # 將 GroupBox 添加到主佈局
+        # 將 GroupBox 添加到主佈局（移除狀態容器，狀態已移至左側控制面板）
         main_layout.addWidget(data_group)
         
         return status_widget
     
     def update_status_style(self, status_type='idle'):
         """
-        更新測量狀態的樣式
+        更新測量狀態的樣式（左側控制面板小型樣式）
         Args:
             status_type: 'idle', 'running', 'completed', 'error'
         """
@@ -722,38 +701,37 @@ class ProfessionalKeithleyWidget(QWidget):
             'idle': {
                 'color': '#2c3e50',
                 'bg_color': '#ecf0f1',
-                'border_color': '#95a5a6'
+                'border_color': '#bdc3c7'
             },
             'running': {
-                'color': '#e67e22',
-                'bg_color': '#fdf2e9',
+                'color': '#ffffff',
+                'bg_color': '#f39c12',
                 'border_color': '#e67e22'
             },
             'completed': {
-                'color': '#27ae60',
-                'bg_color': '#e8f8f5',
-                'border_color': '#27ae60'
+                'color': '#ffffff',
+                'bg_color': '#27ae60',
+                'border_color': '#229954'
             },
             'error': {
-                'color': '#c0392b',
-                'bg_color': '#fadbd8',
+                'color': '#ffffff',
+                'bg_color': '#e74c3c',
                 'border_color': '#c0392b'
             }
         }
         
         config = style_configs.get(status_type, style_configs['idle'])
-        font_size = self.get_responsive_font_size()
         
         self.measurement_status.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;
-                font-size: {font_size}px;
+                font-size: 12px;
                 color: {config['color']};
                 background-color: {config['bg_color']};
-                border: 2px solid {config['border_color']};
-                border-radius: 8px;
-                padding: 8px 15px;
-                min-height: 25px;
+                border: 1px solid {config['border_color']};
+                border-radius: 5px;
+                padding: 5px 10px;
+                margin-top: 5px;
             }}
         """)
         
