@@ -272,6 +272,112 @@ class RigolControlWidget(QWidget):
         self.protection_controls = [self.ovp_spin, self.ocp_spin, 
                                    self.ovp_enable, self.ocp_enable]
         
+        # ================================
+        # 專業化功能：記憶體管理群組
+        # ================================
+        memory_group = QGroupBox("記憶體管理")
+        memory_layout = QGridLayout(memory_group)
+        
+        # 記憶體選擇
+        memory_layout.addWidget(QLabel("記憶體槽位:"), 0, 0)
+        self.memory_combo = QComboBox()
+        for i in range(1, 6):
+            self.memory_combo.addItem(f"M{i} - 空")
+        memory_layout.addWidget(self.memory_combo, 0, 1)
+        
+        # 記憶體操作按鈕
+        memory_btn_layout = QHBoxLayout()
+        
+        self.save_memory_btn = QPushButton("💾 保存")
+        self.save_memory_btn.clicked.connect(self.save_current_to_memory)
+        self.save_memory_btn.setEnabled(False)
+        self.save_memory_btn.setToolTip("將當前設定保存到選定的記憶體槽位")
+        
+        self.load_memory_btn = QPushButton("📂 載入")
+        self.load_memory_btn.clicked.connect(self.load_from_memory)
+        self.load_memory_btn.setEnabled(False)
+        self.load_memory_btn.setToolTip("從選定的記憶體槽位載入設定")
+        
+        self.refresh_memory_btn = QPushButton("🔄 刷新")
+        self.refresh_memory_btn.clicked.connect(self.refresh_memory_catalog)
+        self.refresh_memory_btn.setEnabled(False)
+        self.refresh_memory_btn.setToolTip("刷新記憶體內容顯示")
+        
+        memory_btn_layout.addWidget(self.save_memory_btn)
+        memory_btn_layout.addWidget(self.load_memory_btn)
+        memory_btn_layout.addWidget(self.refresh_memory_btn)
+        memory_layout.addLayout(memory_btn_layout, 1, 0, 1, 2)
+        
+        # 記憶體內容預覽
+        memory_layout.addWidget(QLabel("內容預覽:"), 2, 0)
+        self.memory_preview = QLabel("V: -.---V, I: -.---A")
+        self.memory_preview.setStyleSheet("color: #7f8c8d; font-family: monospace;")
+        memory_layout.addWidget(self.memory_preview, 2, 1)
+        
+        # 記憶體快速載入按鈕組
+        quick_memory_layout = QHBoxLayout()
+        self.quick_memory_btns = []
+        for i in range(1, 6):
+            btn = QPushButton(f"M{i}")
+            btn.setFixedSize(35, 25)
+            btn.clicked.connect(lambda checked, mem=i: self.quick_load_memory(mem))
+            btn.setEnabled(False)
+            btn.setToolTip(f"快速載入記憶體 M{i}")
+            self.quick_memory_btns.append(btn)
+            quick_memory_layout.addWidget(btn)
+        
+        memory_layout.addLayout(quick_memory_layout, 3, 0, 1, 2)
+        
+        layout.addWidget(memory_group)
+        
+        # 儲存記憶體控制引用
+        self.memory_controls = [self.memory_combo, self.save_memory_btn, 
+                               self.load_memory_btn, self.refresh_memory_btn] + self.quick_memory_btns
+        
+        # ================================
+        # 專業化功能：進階狀態監控
+        # ================================
+        status_group = QGroupBox("設備狀態監控")
+        status_layout = QGridLayout(status_group)
+        
+        # 保護狀態顯示
+        status_layout.addWidget(QLabel("保護狀態:"), 0, 0)
+        self.protection_status_label = QLabel("正常")
+        self.protection_status_label.setStyleSheet("color: #27ae60; font-weight: bold;")
+        status_layout.addWidget(self.protection_status_label, 0, 1)
+        
+        self.clear_protection_btn = QPushButton("清除保護")
+        self.clear_protection_btn.clicked.connect(self.clear_device_protection)
+        self.clear_protection_btn.setEnabled(False)
+        self.clear_protection_btn.setVisible(False)  # 預設隱藏，只在需要時顯示
+        status_layout.addWidget(self.clear_protection_btn, 0, 2)
+        
+        # 追蹤模式顯示
+        status_layout.addWidget(QLabel("追蹤模式:"), 1, 0)
+        self.track_mode_combo = QComboBox()
+        self.track_mode_combo.addItems(["INDEP (獨立)", "SER (串聯)", "PARA (並聯)"])
+        self.track_mode_combo.currentTextChanged.connect(self.set_track_mode)
+        self.track_mode_combo.setEnabled(False)
+        status_layout.addWidget(self.track_mode_combo, 1, 1, 1, 2)
+        
+        # 設備溫度顯示
+        status_layout.addWidget(QLabel("設備溫度:"), 2, 0)
+        self.temperature_label = QLabel("--°C")
+        self.temperature_label.setStyleSheet("color: #3498db; font-family: monospace;")
+        status_layout.addWidget(self.temperature_label, 2, 1)
+        
+        # 狀態刷新按鈕
+        self.refresh_status_btn = QPushButton("刷新狀態")
+        self.refresh_status_btn.clicked.connect(self.refresh_device_status)
+        self.refresh_status_btn.setEnabled(False)
+        status_layout.addWidget(self.refresh_status_btn, 2, 2)
+        
+        layout.addWidget(status_group)
+        
+        # 儲存狀態監控控制引用
+        self.status_controls = [self.track_mode_combo, self.clear_protection_btn, 
+                               self.refresh_status_btn]
+        
         # 應用設定按鈕
         apply_layout = QHBoxLayout()
         self.apply_btn = QPushButton("應用設定")
@@ -299,7 +405,8 @@ class RigolControlWidget(QWidget):
         
         # 儲存所有需要啟用/停用的控制項
         self.all_controls = (self.power_controls + self.protection_controls + 
-                            self.measurement_controls + [self.apply_btn])
+                            self.measurement_controls + self.memory_controls + 
+                            self.status_controls + [self.apply_btn])
         
         return control_widget
     
@@ -919,3 +1026,304 @@ class RigolControlWidget(QWidget):
     def disconnect_device(self):
         """向後相容: 斷開設備"""
         self.disconnect_current_device()
+        
+    # ================================
+    # 專業化功能實現方法
+    # ================================
+    
+    def save_current_to_memory(self):
+        """保存當前設定到選定的記憶體"""
+        if not self.dp711:
+            QMessageBox.warning(self, "警告", "沒有連接的設備")
+            return
+            
+        try:
+            memory_index = self.memory_combo.currentIndex() + 1
+            success = self.dp711.save_memory_state(memory_index)
+            
+            if success:
+                self.log_message(f"設定已保存到記憶體 M{memory_index}")
+                self.refresh_memory_catalog()  # 刷新顯示
+                QMessageBox.information(self, "保存成功", 
+                    f"當前設定已保存到記憶體 M{memory_index}")
+            else:
+                QMessageBox.warning(self, "保存失敗", "無法保存設定到記憶體")
+                
+        except Exception as e:
+            self.logger.error(f"保存記憶體時發生錯誤: {e}")
+            QMessageBox.critical(self, "保存錯誤", f"保存記憶體失敗: {str(e)}")
+            
+    def load_from_memory(self):
+        """從選定的記憶體載入設定"""
+        if not self.dp711:
+            QMessageBox.warning(self, "警告", "沒有連接的設備")
+            return
+            
+        try:
+            memory_index = self.memory_combo.currentIndex() + 1
+            success = self.dp711.recall_memory_state(memory_index)
+            
+            if success:
+                # 更新GUI顯示以反映載入的設定
+                self._update_gui_from_device()
+                self.log_message(f"已從記憶體 M{memory_index} 載入設定")
+                QMessageBox.information(self, "載入成功", 
+                    f"已從記憶體 M{memory_index} 載入設定")
+            else:
+                QMessageBox.warning(self, "載入失敗", "無法從記憶體載入設定")
+                
+        except Exception as e:
+            self.logger.error(f"載入記憶體時發生錯誤: {e}")
+            QMessageBox.critical(self, "載入錯誤", f"載入記憶體失敗: {str(e)}")
+            
+    def quick_load_memory(self, memory_number: int):
+        """快速載入指定記憶體"""
+        if not self.dp711:
+            return
+            
+        try:
+            success = self.dp711.recall_memory_state(memory_number)
+            if success:
+                self._update_gui_from_device()
+                self.log_message(f"快速載入記憶體 M{memory_number}")
+                
+                # 更新記憶體選擇器
+                self.memory_combo.setCurrentIndex(memory_number - 1)
+            else:
+                self.log_message(f"載入記憶體 M{memory_number} 失敗")
+                
+        except Exception as e:
+            self.logger.error(f"快速載入記憶體 M{memory_number} 時發生錯誤: {e}")
+            self.log_message(f"載入記憶體 M{memory_number} 錯誤: {e}")
+            
+    def refresh_memory_catalog(self):
+        """刷新記憶體內容目錄"""
+        if not self.dp711:
+            return
+            
+        try:
+            self.refresh_memory_btn.setText("刷新中...")
+            self.refresh_memory_btn.setEnabled(False)
+            
+            # 獲取記憶體目錄
+            memory_catalog = self.dp711.get_memory_catalog()
+            
+            # 更新記憶體選擇器顯示
+            for i, (mem_num, mem_info) in enumerate(memory_catalog.items()):
+                if 'error' not in mem_info:
+                    voltage = mem_info.get('voltage', 0.0)
+                    current = mem_info.get('current', 0.0)
+                    display_text = f"M{mem_num} - {voltage:.2f}V/{current:.2f}A"
+                    
+                    # 更新快速按鈕提示
+                    if i < len(self.quick_memory_btns):
+                        self.quick_memory_btns[i].setToolTip(
+                            f"M{mem_num}: {voltage:.2f}V, {current:.2f}A"
+                        )
+                else:
+                    display_text = f"M{mem_num} - 空"
+                    if i < len(self.quick_memory_btns):
+                        self.quick_memory_btns[i].setToolTip(f"M{mem_num}: 空槽位")
+                
+                # 更新下拉選單
+                if i < self.memory_combo.count():
+                    self.memory_combo.setItemText(i, display_text)
+                    
+            # 更新當前選中記憶體的預覽
+            self._update_memory_preview()
+            
+            self.log_message("記憶體目錄已刷新")
+            
+        except Exception as e:
+            self.logger.error(f"刷新記憶體目錄時發生錯誤: {e}")
+            self.log_message(f"刷新記憶體目錄失敗: {e}")
+            
+        finally:
+            self.refresh_memory_btn.setText("🔄 刷新")
+            self.refresh_memory_btn.setEnabled(True)
+            
+    def _update_memory_preview(self):
+        """更新記憶體內容預覽"""
+        if not self.dp711:
+            self.memory_preview.setText("V: -.---V, I: -.---A")
+            return
+            
+        try:
+            memory_index = self.memory_combo.currentIndex() + 1
+            current_text = self.memory_combo.currentText()
+            
+            if " - " in current_text and "空" not in current_text:
+                # 從顯示文本中提取數值
+                preview_part = current_text.split(" - ")[1]
+                self.memory_preview.setText(preview_part)
+            else:
+                self.memory_preview.setText("V: -.---V, I: -.---A")
+                
+        except Exception as e:
+            self.logger.debug(f"更新記憶體預覽時發生錯誤: {e}")
+            
+    def _update_gui_from_device(self):
+        """從設備讀取設定並更新GUI顯示"""
+        if not self.dp711:
+            return
+            
+        try:
+            # 讀取並更新電壓設定
+            voltage = self.dp711.get_set_voltage()
+            self.voltage_spin.setValue(voltage)
+            
+            # 讀取並更新電流設定
+            current = self.dp711.get_set_current()
+            self.current_spin.setValue(current)
+            
+            # 更新保護設定
+            try:
+                ovp_level = self.dp711.get_ovp_level()
+                if ovp_level > 0:
+                    self.ovp_spin.setValue(ovp_level)
+            except:
+                pass
+                
+            try:
+                ocp_level = self.dp711.get_ocp_level()
+                if ocp_level > 0:
+                    self.ocp_spin.setValue(ocp_level)
+            except:
+                pass
+                
+            # 更新追蹤模式
+            try:
+                track_mode = self.dp711.get_track_mode()
+                mode_mapping = {
+                    'INDEP': 0,
+                    'SER': 1, 
+                    'PARA': 2
+                }
+                if track_mode in mode_mapping:
+                    self.track_mode_combo.setCurrentIndex(mode_mapping[track_mode])
+            except:
+                pass
+                
+            self.log_message("GUI 顯示已同步設備設定")
+            
+        except Exception as e:
+            self.logger.error(f"從設備更新GUI時發生錯誤: {e}")
+            
+    def set_track_mode(self, mode_text: str):
+        """設定追蹤模式"""
+        if not self.dp711:
+            return
+            
+        try:
+            # 從顯示文本中提取模式
+            mode = mode_text.split()[0]  # 取第一個單詞
+            success = self.dp711.set_track_mode(mode)
+            
+            if success:
+                self.log_message(f"追蹤模式已設定為: {mode}")
+            else:
+                self.log_message(f"設定追蹤模式失敗: {mode}")
+                
+        except Exception as e:
+            self.logger.error(f"設定追蹤模式時發生錯誤: {e}")
+            self.log_message(f"設定追蹤模式錯誤: {e}")
+            
+    def clear_device_protection(self):
+        """清除設備保護狀態"""
+        if not self.dp711:
+            return
+            
+        try:
+            success = self.dp711.clear_protection()
+            if success:
+                self.log_message("保護狀態已清除")
+                self.clear_protection_btn.setVisible(False)
+                self.refresh_device_status()  # 刷新狀態顯示
+            else:
+                self.log_message("清除保護狀態失敗")
+                
+        except Exception as e:
+            self.logger.error(f"清除保護狀態時發生錯誤: {e}")
+            self.log_message(f"清除保護狀態錯誤: {e}")
+            
+    def refresh_device_status(self):
+        """刷新設備狀態顯示"""
+        if not self.dp711:
+            return
+            
+        try:
+            # 獲取保護狀態
+            protection_status = self.dp711.get_protection_status()
+            
+            if protection_status.get('protection_clear', True):
+                self.protection_status_label.setText("正常")
+                self.protection_status_label.setStyleSheet("color: #27ae60; font-weight: bold;")
+                self.clear_protection_btn.setVisible(False)
+            else:
+                status_text = []
+                if protection_status.get('ovp_triggered'):
+                    status_text.append("過壓")
+                if protection_status.get('ocp_triggered'):
+                    status_text.append("過流")
+                if protection_status.get('otp_triggered'):
+                    status_text.append("過溫")
+                if protection_status.get('unregulated'):
+                    status_text.append("調節失效")
+                    
+                if status_text:
+                    self.protection_status_label.setText("保護: " + ", ".join(status_text))
+                else:
+                    self.protection_status_label.setText("保護觸發")
+                    
+                self.protection_status_label.setStyleSheet("color: #e74c3c; font-weight: bold;")
+                self.clear_protection_btn.setVisible(True)
+                
+            # 獲取設備溫度
+            temperature = self.dp711.get_device_temperature()
+            if temperature > 0:
+                self.temperature_label.setText(f"{temperature:.1f}°C")
+                
+                # 根據溫度設定顏色
+                if temperature > 60:
+                    temp_color = "#e74c3c"  # 紅色 - 高溫
+                elif temperature > 45:
+                    temp_color = "#f39c12"  # 橙色 - 溫熱
+                else:
+                    temp_color = "#3498db"  # 藍色 - 正常
+                    
+                self.temperature_label.setStyleSheet(f"color: {temp_color}; font-family: monospace;")
+            else:
+                self.temperature_label.setText("--°C")
+                self.temperature_label.setStyleSheet("color: #7f8c8d; font-family: monospace;")
+                
+            self.log_message("設備狀態已刷新")
+            
+        except Exception as e:
+            self.logger.error(f"刷新設備狀態時發生錯誤: {e}")
+            self.log_message(f"刷新設備狀態失敗: {e}")
+            
+    def update_device_controls(self):
+        """更新設備控制項狀態 - 增強版本"""
+        # 調用原有方法
+        super_method = getattr(super(), 'update_device_controls', None)
+        if super_method:
+            super_method()
+        else:
+            # 如果沒有父類方法，執行基本更新
+            has_active_device = self.dp711 is not None
+            self.enable_controls(has_active_device)
+            
+        # 專業化功能的額外初始化
+        if self.dp711:
+            try:
+                # 初始載入記憶體目錄
+                self.refresh_memory_catalog()
+                
+                # 初始載入設備狀態
+                self.refresh_device_status()
+                
+                # 設置記憶體組合框變化監聽
+                self.memory_combo.currentIndexChanged.connect(self._update_memory_preview)
+                
+            except Exception as e:
+                self.logger.warning(f"初始化專業化功能時發生警告: {e}")
