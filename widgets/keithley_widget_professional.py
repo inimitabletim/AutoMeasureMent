@@ -148,8 +148,8 @@ class ProfessionalKeithleyWidget(QWidget):
         self.sweep_worker = None
         self.continuous_worker = None
         
-        # 非阻塞式連線管理器
-        self.connection_manager = ConnectionStateManager()
+        # 連接管理 - 已整合到統一系統
+        # 不再需要單獨的ConnectionStateManager
         
         # 測量數據存儲
         self.iv_data = []  # [(voltage, current, resistance, power), ...]
