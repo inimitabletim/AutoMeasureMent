@@ -57,9 +57,9 @@ The codebase follows an object-oriented design with abstract base classes for in
 The system supports multiple devices of the same type simultaneously:
 
 - **PortManager**: Automatic COM port detection and device identification via SCPI *IDN? queries
-- **MultiDeviceManager**: Manages multiple Rigol DP711 devices with active device switching
-- **Device Widgets**: Modular widget system supporting both single and multi-device modes
+- **Device Widgets**: Modular widget system supporting both single and multi-device modes with integrated device management
 - **Thread-Safe Operation**: All device operations are thread-safe with proper resource management
+- **UnifiedWorkerBase**: Standardized threading system with state management and resource cleanup
 
 ### Key Components
 
@@ -73,16 +73,19 @@ The system supports multiple devices of the same type simultaneously:
 - `keithley_2461.py`: Keithley 2461 SourceMeter implementation (TCP/IP via SCPI)
 - `rigol_dp711.py`: Rigol DP711 Power Supply implementation (RS232 via SCPI)  
 - `port_manager.py`: Automatic COM port scanning and device identification
-- `multi_device_manager.py`: Multi-device management with active device switching
 - `data_logger.py`: Data recording and CSV/JSON export functionality
+- `enhanced_data_system.py`: Advanced data analytics and export system
 - `theme_manager.py`: System theme detection and Qt stylesheet management
+- `unified_logger.py`: Centralized logging system with file rotation
 
 **GUI System (`widgets/`):**
-- `keithley_widget.py`: Complete Keithley 2461 control widget with measurement threading
+- `keithley_widget_professional.py`: Professional Keithley 2461 control with IV curve and sweep measurement capabilities
 - `rigol_widget.py`: Multi-device Rigol DP711 widget with automatic port detection and device switching
-- Multi-threaded design with `MeasurementWorker` for background data acquisition
-- Real-time plotting using pyqtgraph
-- Automatic system theme detection (dark/light mode)
+- `unit_input_widget.py`: Engineering unit input/display widgets with automatic scaling
+- `connection_status_widget.py`: Real-time connection status monitoring
+- `floating_settings_panel.py`: Modular settings overlay system
+- Multi-threaded design using unified worker system for background operations
+- Real-time plotting using pyqtgraph with professional styling
 - Comprehensive logging system with colored output and file rotation
 
 ### Instrument Communication
@@ -113,11 +116,14 @@ The GUI automatically detects and applies system themes:
 
 ### GUI Threading Model
 - Main UI thread handles interface updates
-- `MeasurementWorker` thread runs continuous measurements at 1000ms intervals (1Hz)
+- Unified worker system with `UnifiedWorkerBase` for standardized threading
+- `MeasurementWorker` with strategy pattern supporting continuous and sweep measurements
+- `ConnectionWorker` for non-blocking instrument connections
 - `PortManager` scans for device changes every 2000ms
 - Qt signals/slots used for thread-safe communication
 - Proper cleanup on application exit to prevent resource leaks
 - Background threads automatically terminate when main window closes
+- Worker state management with start/stop/pause capabilities
 
 ### Error Handling Strategy
 - Comprehensive exception handling at instrument communication level
@@ -141,34 +147,65 @@ Both instrument classes follow consistent patterns:
 - `data/`: Default location for exported measurement data
 
 ### Configuration Files
-- `requirements.txt`: Pinned dependencies for reproducible environments (~5,200 lines of code)
-- System theme detection works without additional configuration files
-- No external config files required - all settings managed in code
+- `requirements.txt`: Pinned dependencies for reproducible environments
+- `maintenance_config.py`: System maintenance and database optimization settings
+- `src/config/`: Configuration management system with default settings and validation
+- System theme detection works automatically across platforms
 - Log rotation configured automatically (10MB files, 5 backups)
+- Settings stored in local JSON files when needed (.claude/settings.local.json)
 
 ## Critical Implementation Notes
 
+### Modern Architecture Features
+The codebase has been extensively refactored with a unified architecture system:
+
+**Worker System (`src/workers/`):**
+- `UnifiedWorkerBase`: Solves metaclass conflicts, provides standardized threading interface
+- `MeasurementWorker`: Strategy pattern supporting continuous measurements and voltage sweeps
+- `ConnectionWorker`: Non-blocking connection management with timeout handling
+- Worker state management (idle/running/stopping) with proper cleanup
+
+**Data System (`src/data/`):**
+- `UnifiedDataManager`: Centralized data handling with multiple storage backends
+- `ExportManager`: Multi-format export (CSV, JSON, Excel, Parquet) with metadata
+- `StorageBackends`: Pluggable storage system (CSV, JSON, SQLite)
+- `BufferManager`: Circular buffer management for real-time data
+
+**Configuration System (`src/config/`):**
+- Centralized configuration management with validation
+- Default settings with per-device customization
+- Environment-specific configuration support
+
 ### Code Architecture Decisions
 - **Single Responsibility**: Each module has a clear, single purpose
+- **Strategy Pattern**: Used in workers for different measurement modes
 - **Dependency Injection**: Instruments passed to widgets, not created within them
 - **Observer Pattern**: Extensive use of Qt signals for loose coupling
 - **Resource Management**: Context managers and proper cleanup in all connection classes
+- **Mixin Architecture**: Shared functionality through composable mixins
 
 ## Development Notes
 
 ### Multi-Device Management
-The new multi-device system (primarily for Rigol DP711) provides:
-- Automatic COM port scanning every 2 seconds
-- Device identification via SCPI commands
+The multi-device system provides:
+- Automatic COM port scanning every 2 seconds with smart filtering
+- Device identification via SCPI commands (*IDN? queries)
 - Active device switching without reconnection
-- Graceful handling of device disconnection
-- Thread-safe device state management
+- Graceful handling of device disconnection with automatic cleanup
+- Thread-safe device state management using unified worker system
+- Support for multiple Rigol DP711 devices simultaneously
+- Connection state monitoring with visual feedback
 
 ### Widget Architecture
-The widget system supports both single and multi-device modes:
-- Single device widgets (legacy): Direct instrument control
-- Multi-device widgets: Use device manager for coordination
-- All widgets support theme switching and provide backward compatibility methods
+The widget system is built on a modular, professional-grade architecture:
+- Professional widgets with advanced measurement capabilities (IV curves, sweeps)
+- Multi-device widgets with integrated device management
+- Mixin-based architecture for shared functionality (connection, data visualization)
+- Unit input/display widgets with engineering notation and automatic scaling
+- Floating settings panels for non-intrusive configuration
+- All widgets support automatic theme detection and switching
+- Connection status widgets with real-time monitoring
+- Standardized widget interfaces for easy extension
 
 ### Multi-Instrument Support
 The architecture supports multiple instruments simultaneously:
@@ -192,14 +229,15 @@ The `PortManager` class provides:
 - Thread-safe port access with locking mechanisms
 
 ### Testing Approach
-The system includes functional tests in `test_keithley.py` that verify:
-- Instrument connection and communication
-- SCPI command execution and response parsing
-- Data logging and export functionality
-- Error handling and recovery mechanisms
+The system includes functional testing capabilities integrated into the main modules. Key testing features:
+- Instrument connection validation and communication testing
+- SCPI command execution and response parsing verification
+- Data logging and export functionality validation
+- Real-time error handling and recovery testing
 
 **Testing Notes:**
-- Tests require actual hardware or mock instruments
-- Network tests assume Keithley 2461 available at default IP
+- Tests require actual hardware or mock instruments for full validation
+- Network tests assume Keithley 2461 available at default IP (192.168.0.100)
 - Serial tests require available COM ports for Rigol devices
-- Use `python test_keithley.py` to run full test suite
+- Use the system's built-in diagnostic features for component testing
+- Each widget includes connection testing and validation routines
