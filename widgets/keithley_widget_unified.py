@@ -1056,8 +1056,9 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         
         self.log_text.append(formatted_message)
         
-        # 同時記錄到系統日誌
-        self.logger.info(message)
+        # 同時記錄到系統日誌 - 移除emoji以避免編碼問題
+        log_message = message.replace("✅", "[OK]").replace("❌", "[ERROR]").replace("🚀", "[START]").replace("⚠️", "[WARN]").replace("⏹️", "[STOP]").replace("🔄", "[PROGRESS]").replace("📊", "[DATA]").replace("🗑️", "[CLEAR]")
+        self.logger.info(log_message)
         
     def stop_measurement(self):
         """停止測量 - 覆蓋基類方法"""

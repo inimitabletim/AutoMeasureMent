@@ -62,8 +62,18 @@ class UnifiedLogger:
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(detailed_formatter)
         
-        # 控制台處理器
-        console_handler = logging.StreamHandler(sys.stdout)
+        # 控制台處理器 - 在Windows系統上設置UTF-8編碼
+        try:
+            # 嘗試設置控制台為UTF-8
+            if sys.platform == "win32":
+                import codecs
+                console_stream = codecs.getwriter('utf-8')(sys.stdout.buffer, errors='ignore')
+            else:
+                console_stream = sys.stdout
+        except:
+            console_stream = sys.stdout
+            
+        console_handler = logging.StreamHandler(console_stream)
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(console_formatter)
         
