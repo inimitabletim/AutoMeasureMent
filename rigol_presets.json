@@ -2,31 +2,31 @@
   "3.3V Logic": {
     "voltage": 3.3,
     "current": 1.0,
-    "description": "3.3V逻辑电路"
+    "description": "3.3V邏輯電路"
   },
   "5V Logic": {
     "voltage": 5.0,
     "current": 1.0,
-    "description": "5V逻辑电路"
+    "description": "5V邏輯電路"
   },
   "12V System": {
     "voltage": 12.0,
     "current": 2.0,
-    "description": "12V系统电源"
+    "description": "12V系統電源"
   },
   "24V Motor": {
     "voltage": 24.0,
     "current": 3.0,
-    "description": "24V马达驱动"
+    "description": "24V馬達驅動"
   },
   "Custom 1": {
     "voltage": 0.0,
     "current": 0.1,
-    "description": "自定义1"
+    "description": "自訂1"
   },
   "Custom 2": {
     "voltage": 0.0,
     "current": 0.1,
-    "description": "自定义2"
+    "description": "自訂2"
   }
 }
