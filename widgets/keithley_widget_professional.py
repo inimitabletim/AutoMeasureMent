@@ -177,6 +177,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.floating_settings = None
         self.instrument_settings = {}
         
+        
         self.setup_ui()
         
     def setup_ui(self):
@@ -352,7 +353,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 font-weight: bold;
                 padding: 10px 20px;
                 border-radius: 5px;
-                font-size: 14px;
+                font-size: 16px;
             }
             QPushButton:hover {
                 background-color: #229954;
@@ -374,7 +375,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 font-weight: bold;
                 padding: 10px 20px;
                 border-radius: 5px;
-                font-size: 14px;
+                font-size: 16px;
             }
             QPushButton:hover {
                 background-color: #c0392b;
@@ -398,7 +399,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 font-weight: bold;
                 padding: 8px 16px;
                 border-radius: 5px;
-                font-size: 12px;
+                font-size: 14px;
                 margin-top: 10px;
             }
             QPushButton:hover {
@@ -418,7 +419,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.measurement_status.setStyleSheet("""
             QLabel {
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 14px;
                 color: #2c3e50;
                 background-color: #ecf0f1;
                 border: 1px solid #bdc3c7;
@@ -593,7 +594,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.voltage_unit_label = QLabel("V")
-        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px; margin-left: 3px;")
+        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 16px; margin-left: 3px;")
         self.voltage_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         voltage_layout.addWidget(self.voltage_unit_label)
         
@@ -620,7 +621,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.current_unit_label = QLabel("A")
-        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px; margin-left: 3px;")
+        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 16px; margin-left: 3px;")
         self.current_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         current_layout.addWidget(self.current_unit_label)
         
@@ -647,7 +648,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.power_unit_label = QLabel("W")
-        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px; margin-left: 3px;")
+        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 16px; margin-left: 3px;")
         self.power_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         power_layout.addWidget(self.power_unit_label)
         
@@ -674,7 +675,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 單位標籤
         self.resistance_unit_label = QLabel("Ω")
-        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px; margin-left: 3px;")
+        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 16px; margin-left: 3px;")
         self.resistance_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         resistance_layout.addWidget(self.resistance_unit_label)
         
@@ -725,7 +726,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.measurement_status.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 14px;
                 color: {config['color']};
                 background-color: {config['bg_color']};
                 border: 1px solid {config['border_color']};
@@ -735,42 +736,7 @@ class ProfessionalKeithleyWidget(QWidget):
             }}
         """)
         
-    def get_responsive_font_size(self):
-        """
-        根據窗口大小計算響應式字體大小
-        Returns:
-            int: 字體大小（像素）
-        """
-        # 獲取當前窗口寬度
-        window_width = self.width() if self.width() > 0 else 1200
-        
-        # 基礎字體大小計算：根據窗口寬度動態調整
-        if window_width >= 1400:
-            return 20  # 大螢幕
-        elif window_width >= 1200:
-            return 18  # 中等螢幕  
-        elif window_width >= 1000:
-            return 16  # 小螢幕
-        else:
-            return 14  # 極小螢幕
             
-    def resizeEvent(self, event):
-        """窗口大小改變時更新響應式字體"""
-        super().resizeEvent(event)
-        
-        # 更新狀態顯示字體大小
-        if hasattr(self, 'measurement_status'):
-            font_size = self.get_responsive_font_size()
-            
-            # 更新測量狀態字體（保持當前顏色樣式）
-            current_style = self.measurement_status.styleSheet()
-            if current_style:
-                # 替換字體大小
-                import re
-                new_style = re.sub(r'font-size:\s*\d+px', f'font-size: {font_size}px', current_style)
-                self.measurement_status.setStyleSheet(new_style)
-            
-            # 數據點計數已統一在狀態欄顯示
         
     def create_chart_tab(self):
         """創建圖表分頁"""
