@@ -552,87 +552,122 @@ class ProfessionalKeithleyWidget(QWidget):
         # 不設定特殊樣式，使用與左側 GroupBox 一致的預設主題樣式
         # data_group 將自動繼承應用程式的深色主題
         
-        # 實時數值顯示 - 使用 QGridLayout
+        # 實時數值顯示 - 使用 QGridLayout 組織各個測量參數群組
         values_layout = QGridLayout(data_group)
         
-        # 電壓顯示 - 專業級樣式
-        voltage_label = QLabel("電壓:")
-        voltage_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 16px;")
-        values_layout.addWidget(voltage_label, 0, 0)
-        self.voltage_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
+        # 電壓顯示群組 - LCD 充滿整個 GroupBox
+        voltage_group = QGroupBox("電壓")
+        voltage_group.setStyleSheet("QGroupBox { font-weight: bold; color: #2980b9; }")
+        voltage_layout = QHBoxLayout(voltage_group)
+        voltage_layout.setContentsMargins(5, 3, 5, 3)  # 減小內邊距
+        
+        self.voltage_display = QLCDNumber(6)
         self.voltage_display.setStyleSheet("""
             QLCDNumber { 
                 color: #2980b9; 
                 background-color: #34495e;
                 border: 2px solid #2980b9;
                 border-radius: 5px;
+                min-height: 40px;
             }
         """)
-        values_layout.addWidget(self.voltage_display, 0, 1)
-        self.voltage_unit_label = QLabel("V")
-        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px;")
-        values_layout.addWidget(self.voltage_unit_label, 0, 2)
+        self.voltage_display.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        voltage_layout.addWidget(self.voltage_display, 1)  # stretch factor = 1
         
-        # 電流顯示 - 專業級樣式
-        current_label = QLabel("電流:")
-        current_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 16px;")
-        values_layout.addWidget(current_label, 0, 3)
-        self.current_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
+        # 單位標籤
+        self.voltage_unit_label = QLabel("V")
+        self.voltage_unit_label.setStyleSheet("font-weight: bold; color: #2980b9; font-size: 14px; margin-left: 3px;")
+        self.voltage_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        voltage_layout.addWidget(self.voltage_unit_label)
+        
+        values_layout.addWidget(voltage_group, 0, 0)
+        
+        # 電流顯示群組 - LCD 充滿整個 GroupBox
+        current_group = QGroupBox("電流")
+        current_group.setStyleSheet("QGroupBox { font-weight: bold; color: #e74c3c; }")
+        current_layout = QHBoxLayout(current_group)
+        current_layout.setContentsMargins(5, 3, 5, 3)  # 減小內邊距
+        
+        self.current_display = QLCDNumber(6)
         self.current_display.setStyleSheet("""
             QLCDNumber { 
                 color: #e74c3c; 
                 background-color: #34495e;
                 border: 2px solid #e74c3c;
                 border-radius: 5px;
+                min-height: 40px;
             }
         """)
-        values_layout.addWidget(self.current_display, 0, 4)
-        self.current_unit_label = QLabel("A")
-        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px;")
-        values_layout.addWidget(self.current_unit_label, 0, 5)
+        self.current_display.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        current_layout.addWidget(self.current_display, 1)  # stretch factor = 1
         
-        # 功率顯示 - 專業級樣式 (移至第一排)
-        power_label = QLabel("功率:")
-        power_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 16px;")
-        values_layout.addWidget(power_label, 0, 6)
-        self.power_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
+        # 單位標籤
+        self.current_unit_label = QLabel("A")
+        self.current_unit_label.setStyleSheet("font-weight: bold; color: #e74c3c; font-size: 14px; margin-left: 3px;")
+        self.current_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        current_layout.addWidget(self.current_unit_label)
+        
+        values_layout.addWidget(current_group, 0, 1)
+        
+        # 功率顯示群組 - LCD 充滿整個 GroupBox
+        power_group = QGroupBox("功率")
+        power_group.setStyleSheet("QGroupBox { font-weight: bold; color: #f39c12; }")
+        power_layout = QHBoxLayout(power_group)
+        power_layout.setContentsMargins(5, 3, 5, 3)  # 減小內邊距
+        
+        self.power_display = QLCDNumber(6)
         self.power_display.setStyleSheet("""
             QLCDNumber { 
                 color: #f39c12; 
                 background-color: #34495e;
                 border: 2px solid #f39c12;
                 border-radius: 5px;
+                min-height: 40px;
             }
         """)
-        values_layout.addWidget(self.power_display, 0, 7)
-        self.power_unit_label = QLabel("W")
-        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px;")
-        values_layout.addWidget(self.power_unit_label, 0, 8)
+        self.power_display.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        power_layout.addWidget(self.power_display, 1)  # stretch factor = 1
         
-        # 電阻顯示 - 專業級樣式 (移至第一排)
-        resistance_label = QLabel("電阻:")
-        resistance_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 16px;")
-        values_layout.addWidget(resistance_label, 0, 9)
-        self.resistance_display = QLCDNumber(6)  # 優化為6位數以正確顯示 999.99
+        # 單位標籤
+        self.power_unit_label = QLabel("W")
+        self.power_unit_label.setStyleSheet("font-weight: bold; color: #f39c12; font-size: 14px; margin-left: 3px;")
+        self.power_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        power_layout.addWidget(self.power_unit_label)
+        
+        values_layout.addWidget(power_group, 0, 2)
+        
+        # 電阻顯示群組 - LCD 充滿整個 GroupBox
+        resistance_group = QGroupBox("電阻")
+        resistance_group.setStyleSheet("QGroupBox { font-weight: bold; color: #27ae60; }")
+        resistance_layout = QHBoxLayout(resistance_group)
+        resistance_layout.setContentsMargins(5, 3, 5, 3)  # 減小內邊距
+        
+        self.resistance_display = QLCDNumber(6)
         self.resistance_display.setStyleSheet("""
             QLCDNumber { 
                 color: #27ae60; 
                 background-color: #34495e;
                 border: 2px solid #27ae60;
                 border-radius: 5px;
+                min-height: 40px;
             }
         """)
-        values_layout.addWidget(self.resistance_display, 0, 10)
-        self.resistance_unit_label = QLabel("Ω")
-        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px;")
-        values_layout.addWidget(self.resistance_unit_label, 0, 11)
+        self.resistance_display.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        resistance_layout.addWidget(self.resistance_display, 1)  # stretch factor = 1
         
-        # 設置 QGridLayout 的拉伸係數，讓 LCD 顯示器能夠響應式縮放
-        # 為 LCD 顯示器所在的列設置拉伸係數
-        values_layout.setColumnStretch(1, 2)   # 電壓 LCD 列
-        values_layout.setColumnStretch(4, 2)   # 電流 LCD 列  
-        values_layout.setColumnStretch(7, 2)   # 功率 LCD 列
-        values_layout.setColumnStretch(10, 2)  # 電阻 LCD 列
+        # 單位標籤
+        self.resistance_unit_label = QLabel("Ω")
+        self.resistance_unit_label.setStyleSheet("font-weight: bold; color: #27ae60; font-size: 14px; margin-left: 3px;")
+        self.resistance_unit_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        resistance_layout.addWidget(self.resistance_unit_label)
+        
+        values_layout.addWidget(resistance_group, 0, 3)
+        
+        # 設置各列的均等拉伸，讓四個測量參數群組均勻分布
+        values_layout.setColumnStretch(0, 1)  # 電壓群組
+        values_layout.setColumnStretch(1, 1)  # 電流群組  
+        values_layout.setColumnStretch(2, 1)  # 功率群組
+        values_layout.setColumnStretch(3, 1)  # 電阻群組
         
         # 狀態信息 - 使用專業的居中顯示設計
         # 創建狀態容器以實現更好的控制
