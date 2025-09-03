@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                             QLabel, QPushButton, QLineEdit, QGroupBox, 
                             QComboBox, QDoubleSpinBox, QSpinBox, QCheckBox, QTextEdit,
                             QMessageBox, QProgressBar, QLCDNumber, QSplitter, 
-                            QSizePolicy, QTabWidget)
+                            QSizePolicy, QTabWidget, QFrame)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
 import pyqtgraph as pg
@@ -150,12 +150,17 @@ class RigolControlWidget(QWidget):
     
     def _initialize_control_references(self):
         """初始化所有控制項的引用，便於統一管理狀態"""
-        # 基本控制項 (在基本控制分頁中)
-        self.power_controls = [
+        # 基本控制項 (在基本控制分頁中) 
+        # 注意：quick_buttons_list 在 create_basic_control_tab 中定義
+        basic_controls = [
             self.voltage_spin, self.current_spin, 
-            self.quick_3v3_btn, self.quick_5v_btn, self.quick_12v_btn, 
-            self.output_btn
+            self.output_btn, self.apply_btn,
+            self.custom_voltage, self.custom_current, self.apply_custom_btn
         ]
+        # 添加快速按鈕（如果存在）
+        if hasattr(self, 'quick_buttons_list'):
+            basic_controls.extend(self.quick_buttons_list)
+        self.power_controls = basic_controls
         
         # 進階功能控制項 (在進階功能分頁中)
         self.protection_controls = [
@@ -201,136 +206,321 @@ class RigolControlWidget(QWidget):
     def create_basic_control_tab(self):
         """創建基本控制分頁 - 日常最常用的核心功能"""
         tab_widget = QWidget()
-        layout = QVBoxLayout(tab_widget)
-        layout.setSpacing(8)
-        
-        # 設備管理群組
-        device_group = QGroupBox("設備管理")
+        # 改用 GridLayout 作為主佈局，優先顯示設備連接
+        main_layout = QGridLayout(tab_widget)
+        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        # ================================
+        # 設備連接管理 - 頂部最顯眼位置 (0,0) 橫跨兩列
+        # ================================
+        device_group = QGroupBox("🔗 設備連接管理 (第一步)")
+        device_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 3px solid #e74c3c;
+                border-radius: 8px;
+                margin: 3px;
+                padding-top: 10px;
+                background-color: rgba(231, 76, 60, 0.05);
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+                color: #e74c3c;
+            }
+        """)
         device_layout = QGridLayout(device_group)
+        device_layout.setSpacing(8)
         
-        # 已連接設備選擇
+        # 當前設備狀態
         device_layout.addWidget(QLabel("當前設備:"), 0, 0)
         self.device_combo = QComboBox()
-        self.device_combo.addItem("無設備連接")
+        self.device_combo.addItem("❌ 無設備連接")
         self.device_combo.currentTextChanged.connect(self.switch_device)
-        device_layout.addWidget(self.device_combo, 0, 1, 1, 2)
+        self.device_combo.setMinimumHeight(32)
+        self.device_combo.setStyleSheet("""
+            QComboBox {
+                font-size: 12px;
+                padding: 6px;
+                border: 2px solid #e74c3c;
+                border-radius: 4px;
+                background-color: white;
+            }
+        """)
+        device_layout.addWidget(self.device_combo, 0, 1, 1, 3)
         
-        # 設備資訊顯示
-        self.device_info_label = QLabel("狀態: 無設備連接")
-        self.device_info_label.setWordWrap(True)
-        device_layout.addWidget(self.device_info_label, 1, 0, 1, 3)
-        
-        layout.addWidget(device_group)
-        
-        # 新設備連接群組
-        connection_group = QGroupBox("新設備連接")
-        conn_layout = QGridLayout(connection_group)
-        
-        conn_layout.addWidget(QLabel("可用端口:"), 0, 0)
+        # 新設備連接
+        device_layout.addWidget(QLabel("選擇端口:"), 1, 0)
         self.port_combo = QComboBox()
-        conn_layout.addWidget(self.port_combo, 0, 1)
+        self.port_combo.setMinimumHeight(32)
+        self.port_combo.setStyleSheet("font-size: 11px; padding: 4px;")
+        device_layout.addWidget(self.port_combo, 1, 1)
         
-        self.scan_btn = QPushButton("🔄 掃描")
-        self.scan_btn.clicked.connect(self.scan_ports)
-        conn_layout.addWidget(self.scan_btn, 0, 2)
-        
-        conn_layout.addWidget(QLabel("波特率:"), 1, 0)
+        device_layout.addWidget(QLabel("波特率:"), 1, 2)
         self.baudrate_combo = QComboBox()
         self.baudrate_combo.addItems(["9600", "19200", "38400", "57600", "115200"])
         self.baudrate_combo.setCurrentText("9600")
-        conn_layout.addWidget(self.baudrate_combo, 1, 1, 1, 2)
+        self.baudrate_combo.setMinimumHeight(32)
+        self.baudrate_combo.setMaximumWidth(80)
+        self.baudrate_combo.setStyleSheet("font-size: 11px; padding: 4px;")
+        device_layout.addWidget(self.baudrate_combo, 1, 3)
         
-        self.connect_btn = QPushButton("連接設備")
+        # 操作按鈕行
+        scan_connect_layout = QHBoxLayout()
+        
+        self.scan_btn = QPushButton("🔄 掃描端口")
+        self.scan_btn.clicked.connect(self.scan_ports)
+        self.scan_btn.setMinimumHeight(36)
+        self.scan_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 5px;
+                background-color: #f39c12;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #e67e22;
+            }
+        """)
+        scan_connect_layout.addWidget(self.scan_btn)
+        
+        self.connect_btn = QPushButton("📱 連接設備")
         self.connect_btn.clicked.connect(self.connect_new_device)
-        conn_layout.addWidget(self.connect_btn, 2, 0, 1, 3)
+        self.connect_btn.setMinimumHeight(36)
+        self.connect_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 5px;
+                background-color: #27ae60;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #2ecc71;
+            }
+        """)
+        scan_connect_layout.addWidget(self.connect_btn)
         
-        layout.addWidget(connection_group)
+        self.disconnect_btn = QPushButton("⚠️ 斷開設備")
+        self.disconnect_btn.clicked.connect(self.disconnect_current_device)
+        self.disconnect_btn.setEnabled(False)
+        self.disconnect_btn.setMinimumHeight(36)
+        self.disconnect_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 5px;
+                background-color: #e74c3c;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+            }
+        """)
+        scan_connect_layout.addWidget(self.disconnect_btn)
         
-        # 電源輸出控制群組
-        power_group = QGroupBox("電源輸出控制")
+        device_layout.addLayout(scan_connect_layout, 2, 0, 1, 4)
+        
+        # 設備狀態顯示
+        self.device_info_label = QLabel("狀態: 請先連接設備才能進行其他操作")
+        self.device_info_label.setWordWrap(True)
+        self.device_info_label.setStyleSheet("""
+            color: #e74c3c; 
+            padding: 8px; 
+            background-color: rgba(231, 76, 60, 0.1); 
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        """)
+        device_layout.addWidget(self.device_info_label, 3, 0, 1, 4)
+        
+        # 將設備連接放在頂部，橫跨兩列
+        main_layout.addWidget(device_group, 0, 0, 1, 2)
+        
+        # ================================
+        # 電源設定與快速控制 - 整合版 (1,0) 橫跨兩列
+        # ================================
+        power_group = QGroupBox("⚡ 電源設定與快速控制")
+        power_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                border: 2px solid #3498db;
+                border-radius: 5px;
+                margin: 3px;
+                padding-top: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 8px;
+                padding: 0 4px 0 4px;
+            }
+        """)
         power_layout = QGridLayout(power_group)
+        power_layout.setSpacing(8)
         
-        power_layout.addWidget(QLabel("電壓設定 (V):"), 0, 0)
+        # 第一行：基本設定
+        power_layout.addWidget(QLabel("電壓 (V):"), 0, 0)
         self.voltage_spin = QDoubleSpinBox()
         self.voltage_spin.setRange(0, 30.0)
         self.voltage_spin.setDecimals(3)
         self.voltage_spin.setSingleStep(0.1)
         self.voltage_spin.setValue(5.0)
         self.voltage_spin.setEnabled(False)
+        self.voltage_spin.setMinimumHeight(32)
+        self.voltage_spin.setStyleSheet("font-size: 11px; padding: 4px;")
         power_layout.addWidget(self.voltage_spin, 0, 1)
         
-        power_layout.addWidget(QLabel("電流限制 (A):"), 1, 0)
+        power_layout.addWidget(QLabel("電流 (A):"), 0, 2)
         self.current_spin = QDoubleSpinBox()
         self.current_spin.setRange(0, 5.0)
         self.current_spin.setDecimals(3)
         self.current_spin.setSingleStep(0.01)
         self.current_spin.setValue(1.0)
         self.current_spin.setEnabled(False)
-        power_layout.addWidget(self.current_spin, 1, 1)
+        self.current_spin.setMinimumHeight(32)
+        self.current_spin.setStyleSheet("font-size: 11px; padding: 4px;")
+        power_layout.addWidget(self.current_spin, 0, 3)
         
-        # 輸出開關 + 應用設定按鈕
-        button_layout = QHBoxLayout()
-        self.output_btn = QPushButton("開啟輸出")
+        # 第二行：主要控制按鈕
+        control_button_layout = QHBoxLayout()
+        self.output_btn = QPushButton("🔋 開啟輸出")
         self.output_btn.clicked.connect(self.toggle_output)
         self.output_btn.setEnabled(False)
-        button_layout.addWidget(self.output_btn)
+        self.output_btn.setMinimumHeight(36)
+        self.output_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 12px; 
+                font-weight: bold; 
+                padding: 6px 12px;
+                border-radius: 5px;
+                background-color: #27ae60;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #2ecc71;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+            }
+        """)
+        control_button_layout.addWidget(self.output_btn)
         
-        self.apply_btn = QPushButton("應用設定")
+        self.apply_btn = QPushButton("✅ 應用設定")
         self.apply_btn.clicked.connect(self.apply_settings)
         self.apply_btn.setEnabled(False)
-        button_layout.addWidget(self.apply_btn)
+        self.apply_btn.setMinimumHeight(36)
+        self.apply_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 12px; 
+                font-weight: bold; 
+                padding: 6px 12px;
+                border-radius: 5px;
+                background-color: #3498db;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #5dade2;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+            }
+        """)
+        control_button_layout.addWidget(self.apply_btn)
         
-        power_layout.addLayout(button_layout, 2, 0, 1, 2)
+        power_layout.addLayout(control_button_layout, 1, 0, 1, 4)
         
-        layout.addWidget(power_group)
+        # 第三行：快速設定按鈕
+        quick_buttons = [
+            ("3.3V/1A", 3.3, 1.0, "#e74c3c"),
+            ("5V/1A", 5.0, 1.0, "#e67e22"), 
+            ("12V/2A", 12.0, 2.0, "#3498db"),
+            ("24V/3A", 24.0, 3.0, "#9b59b6")
+        ]
         
-        # 快速設定按鈕
-        quick_group = QGroupBox("快速設定")
-        quick_layout = QGridLayout(quick_group)
+        self.quick_buttons_list = []
+        for i, (text, voltage, current, color) in enumerate(quick_buttons):
+            btn = QPushButton(text)
+            btn.clicked.connect(lambda checked, v=voltage, c=current: self.quick_set(v, c))
+            btn.setEnabled(False)
+            btn.setMinimumHeight(32)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    font-weight: bold;
+                    font-size: 11px;
+                    border-radius: 4px;
+                    background-color: {color};
+                    color: white;
+                    padding: 4px 8px;
+                }}
+                QPushButton:hover {{
+                    background-color: {color}dd;
+                }}
+                QPushButton:disabled {{
+                    background-color: #95a5a6;
+                }}
+            """)
+            power_layout.addWidget(btn, 2, i)
+            self.quick_buttons_list.append(btn)
         
-        self.quick_3v3_btn = QPushButton("3.3V/1A")
-        self.quick_3v3_btn.clicked.connect(lambda: self.quick_set(3.3, 1.0))
-        self.quick_3v3_btn.setEnabled(False)
-        quick_layout.addWidget(self.quick_3v3_btn, 0, 0)
+        # 第四行：自定義快速設定
+        power_layout.addWidget(QLabel("自定義:"), 3, 0)
         
-        self.quick_5v_btn = QPushButton("5V/1A")
-        self.quick_5v_btn.clicked.connect(lambda: self.quick_set(5.0, 1.0))
-        self.quick_5v_btn.setEnabled(False)
-        quick_layout.addWidget(self.quick_5v_btn, 0, 1)
+        self.custom_voltage = QDoubleSpinBox()
+        self.custom_voltage.setRange(0, 30.0)
+        self.custom_voltage.setDecimals(1)
+        self.custom_voltage.setValue(12.0)
+        self.custom_voltage.setSuffix("V")
+        self.custom_voltage.setEnabled(False)
+        self.custom_voltage.setMinimumHeight(28)
+        power_layout.addWidget(self.custom_voltage, 3, 1)
         
-        self.quick_12v_btn = QPushButton("12V/2A")
-        self.quick_12v_btn.clicked.connect(lambda: self.quick_set(12.0, 2.0))
-        self.quick_12v_btn.setEnabled(False)
-        quick_layout.addWidget(self.quick_12v_btn, 1, 0)
+        self.custom_current = QDoubleSpinBox()
+        self.custom_current.setRange(0, 5.0)
+        self.custom_current.setDecimals(2)
+        self.custom_current.setValue(1.5)
+        self.custom_current.setSuffix("A")
+        self.custom_current.setEnabled(False)
+        self.custom_current.setMinimumHeight(28)
+        power_layout.addWidget(self.custom_current, 3, 2)
         
-        self.quick_24v_btn = QPushButton("24V/3A")
-        self.quick_24v_btn.clicked.connect(lambda: self.quick_set(24.0, 3.0))
-        self.quick_24v_btn.setEnabled(False)
-        quick_layout.addWidget(self.quick_24v_btn, 1, 1)
+        self.apply_custom_btn = QPushButton("套用自定義")
+        self.apply_custom_btn.clicked.connect(self.apply_custom_quick_set)
+        self.apply_custom_btn.setEnabled(False)
+        self.apply_custom_btn.setMinimumHeight(28)
+        self.apply_custom_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px;
+                font-weight: bold;
+                padding: 4px 8px;
+                border-radius: 4px;
+                background-color: #9b59b6;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+            }
+        """)
+        power_layout.addWidget(self.apply_custom_btn, 3, 3)
         
-        layout.addWidget(quick_group)
+        # 將整合的電源控制放在下方，橫跨兩列
+        main_layout.addWidget(power_group, 1, 0, 1, 2)
         
-        # 設備控制按鈕
-        device_control_group = QGroupBox("設備控制")
-        device_control_layout = QHBoxLayout(device_control_group)
-        
-        self.disconnect_btn = QPushButton("斷開當前")
-        self.disconnect_btn.clicked.connect(self.disconnect_current_device)
-        self.disconnect_btn.setEnabled(False)
-        device_control_layout.addWidget(self.disconnect_btn)
-        
-        self.disconnect_all_btn = QPushButton("斷開所有")
-        self.disconnect_all_btn.clicked.connect(self.disconnect_all_devices)
-        self.disconnect_all_btn.setEnabled(False)
-        device_control_layout.addWidget(self.disconnect_all_btn)
-        
-        layout.addWidget(device_control_group)
-        
-        # 儲存基本控制項引用
-        self.power_controls = [self.voltage_spin, self.current_spin, self.output_btn, 
-                              self.quick_3v3_btn, self.quick_5v_btn, self.quick_12v_btn, self.quick_24v_btn]
-        
-        layout.addStretch()  # 底部彈性空間
+        # 設定行高比例：設備連接40%，電源控制60%
+        main_layout.setRowStretch(0, 2)
+        main_layout.setRowStretch(1, 3)
         
         return tab_widget
     
@@ -338,107 +528,250 @@ class RigolControlWidget(QWidget):
         """創建進階功能分頁 - 保護設定、記憶體管理、預設配置"""
         tab_widget = QWidget()
         layout = QVBoxLayout(tab_widget)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
+        
+        # 使用分割器創建更好的空間利用
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # ================================
-        # 保護設定群組
+        # 左側：安全與保護設定
         # ================================
-        protection_group = QGroupBox("🛡️ 保護設定")
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setSpacing(8)
+        
+        # 保護設定群組 - 增強版
+        protection_group = QGroupBox("🛡️ 安全保護設定")
+        protection_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                border: 2px solid #e74c3c;
+                border-radius: 5px;
+                margin: 5px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
         prot_layout = QGridLayout(protection_group)
+        prot_layout.setSpacing(10)
         
+        # 過壓保護
         prot_layout.addWidget(QLabel("過壓保護 (V):"), 0, 0)
         self.ovp_spin = QDoubleSpinBox()
         self.ovp_spin.setRange(0.01, 33.0)
         self.ovp_spin.setDecimals(2)
         self.ovp_spin.setValue(31.0)
         self.ovp_spin.setEnabled(False)
+        self.ovp_spin.setMinimumHeight(30)
+        self.ovp_spin.setStyleSheet("padding: 3px;")
         prot_layout.addWidget(self.ovp_spin, 0, 1)
         
+        self.ovp_enable = QCheckBox("啟用過壓保護")
+        self.ovp_enable.setEnabled(False)
+        self.ovp_enable.setStyleSheet("font-weight: bold; color: #e74c3c;")
+        prot_layout.addWidget(self.ovp_enable, 0, 2)
+        
+        # 過流保護
         prot_layout.addWidget(QLabel("過流保護 (A):"), 1, 0)
         self.ocp_spin = QDoubleSpinBox()
         self.ocp_spin.setRange(0.001, 5.5)
         self.ocp_spin.setDecimals(3)
         self.ocp_spin.setValue(5.2)
         self.ocp_spin.setEnabled(False)
+        self.ocp_spin.setMinimumHeight(30)
+        self.ocp_spin.setStyleSheet("padding: 3px;")
         prot_layout.addWidget(self.ocp_spin, 1, 1)
         
-        self.ovp_enable = QCheckBox("啟用過壓保護")
-        self.ovp_enable.setEnabled(False)
         self.ocp_enable = QCheckBox("啟用過流保護") 
         self.ocp_enable.setEnabled(False)
-        prot_layout.addWidget(self.ovp_enable, 2, 0, 1, 2)
-        prot_layout.addWidget(self.ocp_enable, 3, 0, 1, 2)
+        self.ocp_enable.setStyleSheet("font-weight: bold; color: #e74c3c;")
+        prot_layout.addWidget(self.ocp_enable, 1, 2)
         
-        layout.addWidget(protection_group)
+        # 保護狀態顯示
+        prot_status_layout = QHBoxLayout()
+        prot_status_layout.addWidget(QLabel("保護狀態:"))
+        self.protection_status_display = QLabel("正常運行")
+        self.protection_status_display.setStyleSheet("""
+            background-color: #d5f4e6; 
+            color: #27ae60; 
+            font-weight: bold; 
+            padding: 5px; 
+            border-radius: 3px;
+        """)
+        prot_status_layout.addWidget(self.protection_status_display)
         
+        self.clear_protection_btn = QPushButton("清除保護")
+        self.clear_protection_btn.clicked.connect(self.clear_device_protection)
+        self.clear_protection_btn.setEnabled(False)
+        self.clear_protection_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f39c12;
+                color: white;
+                font-weight: bold;
+                padding: 5px 10px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #e67e22;
+            }
+        """)
+        prot_status_layout.addWidget(self.clear_protection_btn)
+        prot_status_layout.addStretch()
+        
+        prot_layout.addLayout(prot_status_layout, 2, 0, 1, 3)
+        
+        left_layout.addWidget(protection_group)
+        left_layout.addStretch()
+        
+        # ================================  
+        # 右側：數據與配置管理
         # ================================
-        # 記憶體管理群組
-        # ================================
-        memory_group = QGroupBox("💾 記憶體管理")
-        memory_layout = QGridLayout(memory_group)
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setSpacing(8)
         
-        # 記憶體選擇
-        memory_layout.addWidget(QLabel("記憶體槽位:"), 0, 0)
+        # 統一的配置管理群組
+        config_group = QGroupBox("💾 智能配置管理")
+        config_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                border: 2px solid #27ae60;
+                border-radius: 5px;
+                margin: 5px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
+        config_layout = QVBoxLayout(config_group)
+        config_layout.setSpacing(10)
+        
+        # 配置管理標籤頁
+        config_tabs = QTabWidget()
+        config_tabs.setTabPosition(QTabWidget.TabPosition.North)
+        
+        # 記憶體管理標籤
+        memory_tab = QWidget()
+        memory_layout = QVBoxLayout(memory_tab)
+        memory_layout.setSpacing(8)
+        
+        # 記憶體選擇和預覽
+        memory_select_layout = QHBoxLayout()
+        memory_select_layout.addWidget(QLabel("記憶體槽位:"))
         self.memory_combo = QComboBox()
         for i in range(1, 6):
             self.memory_combo.addItem(f"M{i} - 空")
-        memory_layout.addWidget(self.memory_combo, 0, 1)
-        
-        # 記憶體操作按鈕
-        memory_btn_layout = QHBoxLayout()
-        
-        self.save_memory_btn = QPushButton("💾 保存")
-        self.save_memory_btn.clicked.connect(self.save_current_to_memory)
-        self.save_memory_btn.setEnabled(False)
-        self.save_memory_btn.setToolTip("將當前設定保存到選定的記憶體槽位")
-        
-        self.load_memory_btn = QPushButton("📂 載入")
-        self.load_memory_btn.clicked.connect(self.load_from_memory)
-        self.load_memory_btn.setEnabled(False)
-        self.load_memory_btn.setToolTip("從選定的記憶體槽位載入設定")
+        self.memory_combo.setMinimumHeight(30)
+        memory_select_layout.addWidget(self.memory_combo)
         
         self.refresh_memory_btn = QPushButton("🔄 刷新")
         self.refresh_memory_btn.clicked.connect(self.refresh_memory_catalog)
         self.refresh_memory_btn.setEnabled(False)
         self.refresh_memory_btn.setToolTip("刷新記憶體內容顯示")
+        memory_select_layout.addWidget(self.refresh_memory_btn)
         
-        memory_btn_layout.addWidget(self.save_memory_btn)
-        memory_btn_layout.addWidget(self.load_memory_btn)
-        memory_btn_layout.addWidget(self.refresh_memory_btn)
-        memory_layout.addLayout(memory_btn_layout, 1, 0, 1, 2)
+        memory_layout.addLayout(memory_select_layout)
         
         # 記憶體內容預覽
-        memory_layout.addWidget(QLabel("內容預覽:"), 2, 0)
-        self.memory_preview = QLabel("V: -.---V, I: -.---A")
-        self.memory_preview.setStyleSheet("color: #7f8c8d; font-family: monospace;")
-        memory_layout.addWidget(self.memory_preview, 2, 1)
+        self.memory_preview = QLabel("選擇記憶體槽位以查看內容")
+        self.memory_preview.setStyleSheet("""
+            background-color: #f8f9fa; 
+            color: #495057; 
+            font-family: monospace; 
+            padding: 10px; 
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        """)
+        self.memory_preview.setWordWrap(True)
+        memory_layout.addWidget(self.memory_preview)
         
-        # 記憶體快速載入按鈕組
-        quick_memory_layout = QHBoxLayout()
+        # 記憶體操作按鈕
+        memory_btn_layout = QHBoxLayout()
+        
+        self.save_memory_btn = QPushButton("💾 保存當前")
+        self.save_memory_btn.clicked.connect(self.save_current_to_memory)
+        self.save_memory_btn.setEnabled(False)
+        self.save_memory_btn.setToolTip("將當前設定保存到選定的記憶體槽位")
+        self.save_memory_btn.setMinimumHeight(35)
+        memory_btn_layout.addWidget(self.save_memory_btn)
+        
+        self.load_memory_btn = QPushButton("📂 載入設定")
+        self.load_memory_btn.clicked.connect(self.load_from_memory)
+        self.load_memory_btn.setEnabled(False)
+        self.load_memory_btn.setToolTip("從選定的記憶體槽位載入設定")
+        self.load_memory_btn.setMinimumHeight(35)
+        memory_btn_layout.addWidget(self.load_memory_btn)
+        
+        memory_layout.addLayout(memory_btn_layout)
+        
+        # 快速記憶體按鈕 - 改進版
+        memory_layout.addWidget(QLabel("快速載入:"))
+        
+        quick_memory_layout = QGridLayout()
+        quick_memory_layout.setSpacing(8)
+        
         self.quick_memory_btns = []
         for i in range(1, 6):
-            btn = QPushButton(f"M{i}")
-            btn.setFixedSize(35, 25)
+            btn = QPushButton(f"記憶體 M{i}")
+            btn.setMinimumSize(80, 36)  # 增加按鈕大小
             btn.clicked.connect(lambda checked, mem=i: self.quick_load_memory(mem))
             btn.setEnabled(False)
-            btn.setToolTip(f"快速載入記憶體 M{i}")
+            btn.setToolTip(f"快速載入記憶體 M{i} 設定")
+            btn.setStyleSheet("""
+                QPushButton {
+                    font-weight: bold;
+                    font-size: 11px;
+                    border-radius: 6px;
+                    background-color: #6c757d;
+                    color: white;
+                    padding: 6px 10px;
+                    border: 1px solid #5a6268;
+                }
+                QPushButton:hover {
+                    background-color: #5a6268;
+                    border-color: #495057;
+                }
+                QPushButton:pressed {
+                    background-color: #495057;
+                }
+                QPushButton:disabled {
+                    background-color: #95a5a6;
+                    border-color: #7f8c8d;
+                    color: #ecf0f1;
+                }
+            """)
             self.quick_memory_btns.append(btn)
-            quick_memory_layout.addWidget(btn)
+            
+            # 按鈕排列：前3個在第一行，後2個在第二行
+            if i <= 3:
+                quick_memory_layout.addWidget(btn, 0, i-1)
+            else:
+                quick_memory_layout.addWidget(btn, 1, i-4)
         
-        memory_layout.addLayout(quick_memory_layout, 3, 0, 1, 2)
+        memory_layout.addLayout(quick_memory_layout)
         
-        layout.addWidget(memory_group)
+        config_tabs.addTab(memory_tab, "記憶體")
         
-        # ================================
-        # 專業預設配置
-        # ================================
-        preset_group = QGroupBox("⚡ 專業預設配置")
-        preset_layout = QGridLayout(preset_group)
+        # 預設配置標籤
+        preset_tab = QWidget()
+        preset_layout = QVBoxLayout(preset_tab)
+        preset_layout.setSpacing(8)
         
-        # 預設選擇下拉框
-        preset_layout.addWidget(QLabel("預設選項:"), 0, 0)
+        # 預設選擇
+        preset_select_layout = QHBoxLayout()
+        preset_select_layout.addWidget(QLabel("預設選項:"))
         self.preset_combo = QComboBox()
         self.preset_combo.addItem("選擇預設配置...")
+        self.preset_combo.setMinimumHeight(30)
         
         # 載入預設選項
         try:
@@ -456,7 +789,20 @@ class RigolControlWidget(QWidget):
             self.logger.warning(f"載入預設配置文件失敗: {e}")
             self.presets = {}
             
-        preset_layout.addWidget(self.preset_combo, 0, 1)
+        preset_select_layout.addWidget(self.preset_combo)
+        preset_layout.addLayout(preset_select_layout)
+        
+        # 預設資訊顯示
+        self.preset_info_label = QLabel("選擇預設以查看詳細資訊")
+        self.preset_info_label.setWordWrap(True)
+        self.preset_info_label.setStyleSheet("""
+            background-color: #f8f9fa; 
+            color: #495057; 
+            padding: 10px; 
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        """)
+        preset_layout.addWidget(self.preset_info_label)
         
         # 預設操作按鈕
         preset_btn_layout = QHBoxLayout()
@@ -465,27 +811,31 @@ class RigolControlWidget(QWidget):
         self.apply_preset_btn.clicked.connect(self.apply_preset_configuration)
         self.apply_preset_btn.setEnabled(False)
         self.apply_preset_btn.setToolTip("套用選定的預設配置到當前設定")
+        self.apply_preset_btn.setMinimumHeight(35)
+        preset_btn_layout.addWidget(self.apply_preset_btn)
         
         self.save_preset_btn = QPushButton("💾 保存預設")
         self.save_preset_btn.clicked.connect(self.save_custom_preset)
         self.save_preset_btn.setEnabled(False) 
         self.save_preset_btn.setToolTip("將當前設定保存為自訂預設")
-        
-        preset_btn_layout.addWidget(self.apply_preset_btn)
+        self.save_preset_btn.setMinimumHeight(35)
         preset_btn_layout.addWidget(self.save_preset_btn)
         
-        preset_layout.addLayout(preset_btn_layout, 1, 0, 1, 2)
-        
-        # 預設資訊顯示
-        self.preset_info_label = QLabel("選擇預設以查看詳細資訊")
-        self.preset_info_label.setWordWrap(True)
-        self.preset_info_label.setStyleSheet("color: #7f8c8d; font-style: italic; margin: 5px;")
-        preset_layout.addWidget(self.preset_info_label, 2, 0, 1, 2)
+        preset_layout.addLayout(preset_btn_layout)
         
         # 連接預設選擇變化信號
         self.preset_combo.currentTextChanged.connect(self.on_preset_selection_changed)
         
-        layout.addWidget(preset_group)
+        config_tabs.addTab(preset_tab, "預設配置")
+        
+        config_layout.addWidget(config_tabs)
+        right_layout.addWidget(config_group)
+        
+        main_splitter.addWidget(left_panel)
+        main_splitter.addWidget(right_panel)
+        main_splitter.setSizes([300, 400])  # 左側較小，右側較大
+        
+        layout.addWidget(main_splitter)
         
         return tab_widget
     
@@ -1208,6 +1558,15 @@ class RigolControlWidget(QWidget):
         self.voltage_spin.setValue(voltage)
         self.current_spin.setValue(current)
         self.apply_settings()
+        
+    def apply_custom_quick_set(self):
+        """應用自定義快速設定"""
+        if not self.is_device_connected():
+            return
+            
+        voltage = self.custom_voltage.value()
+        current = self.custom_current.value()
+        self.quick_set(voltage, current)
         
     def apply_settings(self):
         """應用設定到設備"""
