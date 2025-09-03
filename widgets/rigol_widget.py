@@ -18,7 +18,9 @@ from pyqtgraph import PlotWidget
 
 from src.rigol_dp711 import RigolDP711
 from src.data_logger import DataLogger
-from src.connection_worker import InstrumentConnectionWorker, ConnectionStateManager
+# 使用新的統一Worker系統
+from src.workers import ConnectionWorker as InstrumentConnectionWorker
+# ConnectionStateManager已整合到Widget基類中
 
 
 class RigolMeasurementWorker(QThread):
@@ -72,8 +74,7 @@ class RigolControlWidget(QWidget):
         self.active_device_port = None  # 當前活動設備端口
         self.dp711 = None  # 當前活動設備實例 (向後相容)
         
-        # 連接管理
-        self.connection_manager = ConnectionStateManager()
+        # 連接管理 - 使用統一Worker系統，不再需要ConnectionStateManager
         self.connection_worker = None  # 當前的連接工作線程
         
         # 其他屬性
@@ -562,18 +563,24 @@ class RigolControlWidget(QWidget):
             'timeout': 5.0  # 5秒超時
         }
         
-        # 創建並配置連接工作線程
-        self.connection_worker = InstrumentConnectionWorker('rigol', connection_params)
+        # 創建Rigol設備實例
+        rigol_device = RigolDP711()
         
-        # 連接信號到對應的處理方法
+        # 創建並配置連接工作線程（使用新的統一Worker）
+        self.connection_worker = InstrumentConnectionWorker(rigol_device, connection_params)
+        
+        # 連接信號到對應的處理方法（新的Worker信號格式）
         self.connection_worker.connection_started.connect(self.on_connection_started)
-        self.connection_worker.connection_progress.connect(self.on_connection_progress)
-        self.connection_worker.connection_success.connect(self.on_connection_success)
-        self.connection_worker.connection_failed.connect(self.on_connection_failed)
-        self.connection_worker.connection_timeout.connect(self.on_connection_timeout)
+        self.connection_worker.progress_updated.connect(lambda p: self.on_connection_progress(f"進度: {p}%"))
+        self.connection_worker.connection_success.connect(lambda name, info: self.on_connection_success(info.get('identity', '已連接')))
+        self.connection_worker.connection_failed.connect(lambda err_type, msg: self.on_connection_failed(msg))
+        self.connection_worker.error_occurred.connect(lambda err_type, msg: self.on_connection_timeout() if 'timeout' in msg.lower() else None)
         
         # 連接完成信號
         self.connection_worker.finished.connect(self.on_connection_finished)
+        
+        # 保存設備實例引用
+        self.pending_device = rigol_device
         
         # 啟動連接線程
         self.connection_worker.start()
@@ -592,10 +599,10 @@ class RigolControlWidget(QWidget):
             
     def on_connection_success(self, message: str):
         """連接成功的回調"""
-        if self.connection_worker:
-            # 獲取連接成功的儀器實例
-            device = self.connection_worker.get_instrument()
-            if device:
+        if hasattr(self, 'pending_device'):
+            # 使用保存的設備實例
+            device = self.pending_device
+            if device and device.is_connected():
                 # 獲取連接參數
                 port = self.port_combo.currentData()
                 

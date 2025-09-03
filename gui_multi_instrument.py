@@ -18,7 +18,9 @@ from src.rigol_dp711 import RigolDP711
 from src.data_logger import DataLogger
 from src.theme_manager import ThemeManager, ThemeStyleSheet
 from src.instrument_base import InstrumentManager
-from widgets.keithley_widget_professional import ProfessionalKeithleyWidget
+# 使用新的統一架構Widget替代舊版本
+# from widgets.keithley_widget_professional import ProfessionalKeithleyWidget  # 已棄用
+from widgets.keithley_widget_unified import KeithleyUnifiedWidget as ProfessionalKeithleyWidget
 from widgets.rigol_widget import RigolControlWidget
 
 
