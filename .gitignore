@@ -52,8 +52,15 @@ data/*.csv
 data/*.json
 data/*.db
 data/measurement_data.db
+data/measurements.db
 data/session_*
+data/archives/
 
 # 暫存檔
 *.tmp
 *.temp
+
+# 維護和清理工具生成的檔案
+cleanup_test_data.py
+maintenance_config.py
+src/database_maintenance.py
