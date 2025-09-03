@@ -272,6 +272,8 @@ class InstrumentWidgetBase(QWidget, ConnectionMixin, MeasurementMixin, DataVisua
         # 由子類實現具體的測量邏輯
         measurement_worker = self._create_measurement_worker()
         if measurement_worker:
+            self.logger.info(f"開始啟動測量Worker: {measurement_worker.worker_name}")
+            
             # 連接信號
             measurement_worker.data_ready.connect(self._on_measurement_ready)
             measurement_worker.error_occurred.connect(self._on_measurement_error)
@@ -280,6 +282,9 @@ class InstrumentWidgetBase(QWidget, ConnectionMixin, MeasurementMixin, DataVisua
             measurement_worker.start_work()
             
             self.measurement_active = True
+            self.logger.info(f"測量Worker已啟動，measurement_active = {self.measurement_active}")
+        else:
+            self.logger.error("無法創建測量Worker")
             self.status_changed.emit("測量進行中...")
             
     def stop_measurement(self):
@@ -362,9 +367,18 @@ class InstrumentWidgetBase(QWidget, ConnectionMixin, MeasurementMixin, DataVisua
         
     def _on_measurement_data(self, data: Dict[str, Any]):
         """測量數據處理"""
+        # 處理時間戳：如果是字串則轉換為datetime物件
+        timestamp = data.get('timestamp')
+        if isinstance(timestamp, str):
+            from datetime import datetime
+            timestamp = datetime.fromisoformat(timestamp)
+        elif timestamp is None:
+            from datetime import datetime
+            timestamp = datetime.now()
+            
         # 創建MeasurementPoint並添加到數據管理器
         point = MeasurementPoint(
-            timestamp=data.get('timestamp'),
+            timestamp=timestamp,
             instrument_id=self.instrument_type,
             voltage=data.get('voltage', 0),
             current=data.get('current', 0),

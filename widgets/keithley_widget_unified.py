@@ -57,7 +57,7 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
             
         # Keithley專屬屬性 - 必須在super().__init__之前初始化
         self.source_function = "VOLT"
-        self.measurement_mode = "continuous"  # continuous, sweep
+        self.keithley_measurement_mode = "continuous"  # continuous, sweep (避免與基類measurement_mode衝突)
         self.sweep_data = []
         self.measurement_worker = None
         
@@ -613,41 +613,59 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         
     def _create_measurement_worker(self) -> Optional[UnifiedWorkerBase]:
         """創建測量Worker - 使用統一Worker系統"""
+        self.add_log(f"🔍 開始創建測量Worker，connected={self.is_connected}, mode={self.keithley_measurement_mode}")
+        
         if not self.is_connected:
+            self.add_log("❌ Worker創建失敗：儀器未連接")
             return None
             
         # 根據測量模式創建對應的Worker
-        if self.measurement_mode == "continuous":
-            # 連續測量策略
-            strategy = ContinuousMeasurementStrategy(
-                self.instrument,
-                interval_ms=int(self.interval_spin.value())
-            )
-        elif self.measurement_mode == "sweep":
-            # IV掃描策略
-            sweep_params = {
-                'start': self.sweep_start.get_base_value(),
-                'stop': self.sweep_stop.get_base_value(),
-                'step': self.sweep_step.get_base_value(),
-                'delay_ms': int(self.sweep_delay.value()),
-                'current_limit': self.sweep_current_limit.get_base_value()
-            }
-            strategy = KeithleySweepStrategy(
-                self.instrument,
-                sweep_params
-            )
-        else:
+        try:
+            if self.keithley_measurement_mode == "continuous":
+                self.add_log("🔧 創建連續測量策略...")
+                # 連續測量策略
+                strategy = ContinuousMeasurementStrategy()
+                params = {
+                    'interval_ms': int(self.interval_spin.value())
+                }
+                self.add_log(f"✅ 連續測量策略創建成功，間隔={params['interval_ms']}ms")
+            elif self.keithley_measurement_mode == "sweep":
+                self.add_log("🔧 創建掃描測量策略...")
+                # IV掃描策略
+                params = {
+                    'start': self.sweep_start.get_base_value(),
+                    'stop': self.sweep_stop.get_base_value(),
+                    'step': self.sweep_step.get_base_value(),
+                    'delay_ms': int(self.sweep_delay.value()),
+                    'current_limit': self.sweep_current_limit.get_base_value()
+                }
+                strategy = KeithleySweepStrategy(self.instrument, params)
+                self.add_log("✅ 掃描測量策略創建成功")
+            else:
+                self.add_log(f"❌ Worker創建失敗：未知測量模式 '{self.keithley_measurement_mode}'")
+                return None
+        except Exception as e:
+            self.add_log(f"❌ 策略創建失敗：{str(e)}")
             return None
             
         # 創建統一測量Worker
-        worker = MeasurementWorker(strategy, "Keithley2461", self.instrument)
-        
-        # 連接專業信號
-        if self.measurement_mode == "sweep":
-            worker.progress_updated.connect(self.sweep_progress.emit)
-            worker.operation_completed.connect(self._on_sweep_completed)
+        try:
+            self.add_log("🔧 開始創建MeasurementWorker...")
+            worker = MeasurementWorker(self.instrument, strategy, params)
+            self.add_log(f"✅ 已創建測量Worker: {worker.worker_name}")
             
-        return worker
+            # 連接專業信號
+            if self.keithley_measurement_mode == "sweep":
+                worker.progress_updated.connect(self.sweep_progress.emit)
+                worker.operation_completed.connect(self._on_sweep_completed)
+                
+            # 添加除錯信號連接
+            worker.data_ready.connect(lambda data: self.add_log(f"📊 收到測量數據: V={data.get('voltage', 0):.3f}V, I={data.get('current', 0):.6f}A"))
+                
+            return worker
+        except Exception as e:
+            self.add_log(f"❌ MeasurementWorker創建失敗：{str(e)}")
+            return None
         
     # 事件處理方法
     def _handle_connection_request(self):
@@ -702,10 +720,10 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
             "穩定性測試": "stability"
         }
         
-        self.measurement_mode = mode_map.get(mode_text, "continuous")
+        self.keithley_measurement_mode = mode_map.get(mode_text, "continuous")
         
         # 顯示/隱藏相應的控制組
-        self.sweep_widget.setVisible(self.measurement_mode == "sweep")
+        self.sweep_widget.setVisible(self.keithley_measurement_mode == "sweep")
         
         # 更新模式說明
         descriptions = {
@@ -715,10 +733,10 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
             "stability": "長時間穩定性測試"
         }
         
-        self.mode_description.setText(descriptions.get(self.measurement_mode, ""))
+        self.mode_description.setText(descriptions.get(self.keithley_measurement_mode, ""))
         
         # 切換到相應的顯示標籤頁
-        if self.measurement_mode == "sweep":
+        if self.keithley_measurement_mode == "sweep":
             self.display_tabs.setCurrentIndex(1)  # IV曲線頁
         else:
             self.display_tabs.setCurrentIndex(0)  # 實時顯示頁
@@ -781,7 +799,7 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
             return
             
         # 重置數據
-        if self.measurement_mode == "sweep":
+        if self.keithley_measurement_mode == "sweep":
             self.sweep_data = []
             self.sweep_progress_bar.setValue(0)
             self.sweep_info_labels["status"].setText("掃描中...")
@@ -857,9 +875,9 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         self._update_lcd_displays(v, i, r, p)
         
         # 根據模式更新圖表
-        if self.measurement_mode == "continuous":
+        if self.keithley_measurement_mode == "continuous":
             self._update_realtime_plot(v, i)
-        elif self.measurement_mode == "sweep":
+        elif self.keithley_measurement_mode == "sweep":
             point_num = data.get('metadata', {}).get('point_number', 0)
             self._update_sweep_data(v, i, r, p, point_num)
             
@@ -973,8 +991,13 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         if self.data_table.rowCount() > max_rows:
             self.data_table.removeRow(0)
             
-    def _update_statistics(self):
-        """更新統計信息"""
+    def _update_statistics(self, measurement_point=None, current_time=None):
+        """更新統計信息
+        
+        Args:
+            measurement_point: 測量數據點 (來自DataVisualizationMixin)
+            current_time: 當前時間 (來自DataVisualizationMixin)
+        """
         # 從數據管理器獲取數據
         recent_data = self.data_manager.get_real_time_data(self.instrument_type, 10000)
         
@@ -1057,7 +1080,12 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         self.log_text.append(formatted_message)
         
         # 同時記錄到系統日誌 - 移除emoji以避免編碼問題
-        log_message = message.replace("✅", "[OK]").replace("❌", "[ERROR]").replace("🚀", "[START]").replace("⚠️", "[WARN]").replace("⏹️", "[STOP]").replace("🔄", "[PROGRESS]").replace("📊", "[DATA]").replace("🗑️", "[CLEAR]")
+        log_message = (message
+                      .replace("✅", "[OK]").replace("❌", "[ERROR]").replace("🚀", "[START]")
+                      .replace("⚠️", "[WARN]").replace("⏹️", "[STOP]").replace("🔄", "[PROGRESS]")
+                      .replace("📊", "[DATA]").replace("🗑️", "[CLEAR]").replace("🔍", "[SEARCH]")
+                      .replace("🔧", "[TOOL]").replace("💡", "[INFO]").replace("🎯", "[TARGET]")
+                      .replace("📈", "[CHART]").replace("🔌", "[CONNECT]").replace("⚡", "[POWER]"))
         self.logger.info(log_message)
         
     def stop_measurement(self):
@@ -1069,7 +1097,7 @@ class KeithleyUnifiedWidget(InstrumentWidgetBase):
         self.start_btn.setEnabled(True)
         
         # 更新掃描信息
-        if self.measurement_mode == "sweep":
+        if self.keithley_measurement_mode == "sweep":
             self.sweep_info_labels["status"].setText("已停止")
             
         self.add_log("⏹️ 測量已停止")
