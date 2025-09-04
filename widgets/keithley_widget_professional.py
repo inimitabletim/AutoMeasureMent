@@ -217,7 +217,8 @@ class ProfessionalKeithleyWidget(QWidget):
         # 滾動內容容器
         scroll_content = QWidget()
         layout = QVBoxLayout(scroll_content)
-        layout.setContentsMargins(5, 5, 5, 5)  # 添加適當的邊距
+        # layout.setContentsMargins(5, 5, 5, 5)  # 添加適當的邊距
+        # layout.setSpacing(3)  # 設置統一的間距，減少GroupBox之間的空隙
         
         # ===== 設備連接 =====
         connection_group = self.create_connection_group()
@@ -228,10 +229,10 @@ class ProfessionalKeithleyWidget(QWidget):
         layout.addWidget(mode_group)
         
         # ===== 源設定 =====
-        self.source_params_container = QWidget()
-        self.source_params_layout = QVBoxLayout(self.source_params_container)
-        self.source_params_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.source_params_container)
+        self.source_params_group = QGroupBox("🔋 源設定")
+        self.source_params_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        self.source_params_layout = QVBoxLayout(self.source_params_group)
+        layout.addWidget(self.source_params_group)
         
         # ===== 掃描設定 =====
         self.sweep_group = self.create_sweep_settings_group()
@@ -504,9 +505,12 @@ class ProfessionalKeithleyWidget(QWidget):
             
     def create_voltage_source_params(self):
         """創建電壓源參數 - 簡化版本"""
-        group = QGroupBox("🔋 電源設置")
-        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        layout = QGridLayout(group)
+        # 更新GroupBox標題
+        self.source_params_group.setTitle("🔋 電壓源設置")
+        
+        # 創建內部網格佈局
+        content_widget = QWidget()
+        layout = QGridLayout(content_widget)
         
         # 基本電壓設置
         layout.addWidget(QLabel("輸出電壓:"), 0, 0)
@@ -520,18 +524,21 @@ class ProfessionalKeithleyWidget(QWidget):
         self.current_limit.set_base_value(0.1)
         layout.addWidget(self.current_limit, 1, 1)
         
-        # 輸出開關
-        self.output_enable_checkbox = QCheckBox("開啟電源輸出")
-        self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
-        layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
+        # 輸出開關 - 暫時註解掉
+        # self.output_enable_checkbox = QCheckBox("開啟電源輸出")
+        # self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
+        # layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
         
-        self.source_params_layout.addWidget(group)
+        self.source_params_layout.addWidget(content_widget)
         
     def create_current_source_params(self):
         """創建電流源參數 - 簡化版本"""
-        group = QGroupBox("⚡ 電流源設置")
-        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        layout = QGridLayout(group)
+        # 更新GroupBox標題
+        self.source_params_group.setTitle("⚡ 電流源設置")
+        
+        # 創建內部網格佈局
+        content_widget = QWidget()
+        layout = QGridLayout(content_widget)
         
         # 基本電流設置
         layout.addWidget(QLabel("輸出電流:"), 0, 0)
@@ -545,12 +552,12 @@ class ProfessionalKeithleyWidget(QWidget):
         self.voltage_limit.set_base_value(21.0)
         layout.addWidget(self.voltage_limit, 1, 1)
         
-        # 輸出開關
-        self.output_enable_checkbox = QCheckBox("開啟電源輸出")
-        self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
-        layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
+        # 輸出開關 - 暫時註解掉
+        # self.output_enable_checkbox = QCheckBox("開啟電源輸出")
+        # self.output_enable_checkbox.stateChanged.connect(self.toggle_output)
+        # layout.addWidget(self.output_enable_checkbox, 2, 0, 1, 2)
         
-        self.source_params_layout.addWidget(group)
+        self.source_params_layout.addWidget(content_widget)
         
     def create_display_panel(self):
         """創建右側顯示面板 - 數據與圖表 5:5 分割"""
