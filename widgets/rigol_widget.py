@@ -343,8 +343,8 @@ class RigolControlWidget(QWidget):
         """)
         device_layout.addWidget(self.device_info_label, 3, 0, 1, 4)
         
-        # 將設備連接放在頂部，橫跨兩列
-        main_layout.addWidget(device_group, 0, 0, 1, 2)
+        # 將設備連接放在左側 (第0列)
+        main_layout.addWidget(device_group, 0, 0, 1, 1)
         
         # ================================
         # 電源設定與快速控制 - 整合版 (1,0) 橫跨兩列
@@ -515,12 +515,12 @@ class RigolControlWidget(QWidget):
         """)
         power_layout.addWidget(self.apply_custom_btn, 3, 3)
         
-        # 將整合的電源控制放在下方，橫跨兩列
-        main_layout.addWidget(power_group, 1, 0, 1, 2)
+        # 將電源控制放在右側 (第1列)，與設備連接並排
+        main_layout.addWidget(power_group, 0, 1, 1, 1)
         
-        # 設定行高比例：設備連接40%，電源控制60%
-        main_layout.setRowStretch(0, 2)
-        main_layout.setRowStretch(1, 3)
+        # 設定列寬比例：設備連接45%，電源控制55%
+        main_layout.setColumnStretch(0, 45)  # 左側設備連接
+        main_layout.setColumnStretch(1, 55)  # 右側電源控制
         
         return tab_widget
     
