@@ -780,8 +780,8 @@ class ProfessionalKeithleyWidget(QWidget):
         stats_frame = QFrame()
         stats_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         stats_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        stats_frame.setMaximumWidth(450)
-        stats_frame.setMinimumWidth(300)
+        stats_frame.setMaximumWidth(650)
+        stats_frame.setMinimumWidth(500)
         
         layout = QHBoxLayout(stats_frame)
         layout.setContentsMargins(8, 3, 8, 3)
