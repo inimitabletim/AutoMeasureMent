@@ -51,15 +51,44 @@ class InstrumentStatusWidget(QFrame):
         layout.addStretch()
         
         # 控制按鈕
-        self.disconnect_all_btn = QPushButton("全部斷開")
-        self.disconnect_all_btn.setMaximumWidth(100)
+        self.disconnect_all_btn = QPushButton("🔌 正常斷開")
+        self.disconnect_all_btn.setMaximumWidth(110)
+        self.disconnect_all_btn.setToolTip("正常結束測量並斷開所有儀器連接")
         self.disconnect_all_btn.clicked.connect(self.disconnect_all)
+        self.disconnect_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
         layout.addWidget(self.disconnect_all_btn)
         
-        self.emergency_stop_btn = QPushButton("緊急停止")
-        self.emergency_stop_btn.setMaximumWidth(100)
-        self.emergency_stop_btn.setStyleSheet("background-color: #e74c3c; color: white;")
+        self.emergency_stop_btn = QPushButton("🛑 緊急停止")
+        self.emergency_stop_btn.setMaximumWidth(110)
+        self.emergency_stop_btn.setToolTip("立即停止所有輸出，用於緊急情況")
         self.emergency_stop_btn.clicked.connect(self.emergency_stop)
+        self.emergency_stop_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: 2px solid #c0392b;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 12px;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+                border-color: #a93226;
+            }
+        """)
         layout.addWidget(self.emergency_stop_btn)
         
         # 設置框架樣式
@@ -144,38 +173,53 @@ class InstrumentStatusWidget(QFrame):
             QMessageBox.critical(self, "錯誤", f"斷開連接時發生錯誤: {str(e)}")
             
     def emergency_stop(self):
-        """緊急停止所有儀器輸出"""
-        reply = QMessageBox.question(
-            self,
-            "緊急停止",
-            "確定要緊急停止所有儀器輸出嗎？\n這將立即關閉所有電源輸出！",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
+        """緊急停止所有儀器輸出 - 立即執行，無確認延遲"""
         
-        if reply == QMessageBox.StandardButton.Yes:
-            # 緊急關閉所有輸出
-            if hasattr(self, 'main_window') and self.main_window:
-                main_window = self.main_window
-                
-                try:
-                    # 緊急停止Keithley
-                    if hasattr(main_window, 'keithley_widget'):
-                        kw = main_window.keithley_widget
+        # 立即執行緊急停止 - 符合工業安全標準
+        emergency_results = []
+        
+        if hasattr(self, 'main_window') and self.main_window:
+            main_window = self.main_window
+            
+            try:
+                # 緊急停止Keithley
+                if hasattr(main_window, 'keithley_widget'):
+                    kw = main_window.keithley_widget
+                    if kw.is_measuring:
                         kw.stop_measurement()  # 停止測量
-                        if kw.keithley and kw.keithley.connected:
-                            kw.keithley.output_off()  # 關閉輸出
-                            
-                    # 緊急停止Rigol
-                    if hasattr(main_window, 'rigol_widget'):
-                        rw = main_window.rigol_widget
-                        if rw.dp711 and hasattr(rw.dp711, 'output_off'):
-                            rw.dp711.output_off()
-                            
-                except Exception as e:
-                    print(f"緊急停止錯誤: {e}")
-                    
-            QMessageBox.information(self, "緊急停止", "所有儀器輸出已緊急關閉！")
+                        emergency_results.append("✅ Keithley測量已停止")
+                    if kw.keithley and kw.keithley.connected:
+                        kw.keithley.output_off()  # 關閉輸出
+                        emergency_results.append("✅ Keithley輸出已關閉")
+                        
+                # 緊急停止Rigol
+                if hasattr(main_window, 'rigol_widget'):
+                    rw = main_window.rigol_widget
+                    if rw.dp711 and hasattr(rw.dp711, 'output_off'):
+                        rw.dp711.output_off()
+                        emergency_results.append("✅ Rigol輸出已關閉")
+                        
+            except Exception as e:
+                emergency_results.append(f"⚠️ 部分操作失敗: {str(e)[:50]}")
+        
+        # 事後通知（非阻塞式）- 顯示執行結果
+        if emergency_results:
+            result_text = "\n".join(emergency_results)
+            # 使用非模態對話框，不阻塞後續操作
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setWindowTitle("🛑 緊急停止執行完成")
+            msg.setText(f"緊急停止已立即執行：\n\n{result_text}")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            # 非阻塞顯示
+            msg.show()
+        else:
+            # 如果沒有需要停止的設備，簡單提示
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setWindowTitle("🛑 緊急停止")
+            msg.setText("未發現需要緊急停止的活動設備")
+            msg.show()
 
 
 
