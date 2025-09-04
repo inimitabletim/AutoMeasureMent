@@ -838,7 +838,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 統計功率標籤
         self.stats_power_label = QLabel("統計功率: --W")
-        self.stats_power_label.setStyleSheet("color: #9C27B0; font-weight: bold; font-size: 14px;")
+        self.stats_power_label.setStyleSheet("color: #1ce6df; font-weight: bold; font-size: 14px;")
         layout.addWidget(self.stats_power_label)
         
         return stats_frame
@@ -968,14 +968,17 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 數據表格
         self.data_table = QTableWidget()
-        self.data_table.setColumnCount(6)
-        self.data_table.setHorizontalHeaderLabels(["點#", "電壓 (V)", "電流 (A)", "電阻 (Ω)", "功率 (W)", "時間"])
+        self.data_table.setColumnCount(5)  # 移除點#欄位，減少一欄
+        self.data_table.setHorizontalHeaderLabels(["時間", "電壓 (V)", "電流 (A)", "電阻 (Ω)", "功率 (W)"])  # 時間移至第一欄，移除點#
         
         # 設置表格屬性
         header = self.data_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.data_table.setAlternatingRowColors(True)
         self.data_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # 隱藏行號索引（左側的行號）
+        self.data_table.verticalHeader().setVisible(False)
         
         layout.addWidget(self.data_table)
         
@@ -1978,18 +1981,18 @@ class ProfessionalKeithleyWidget(QWidget):
         # 數據點統一在狀態欄顯示
     
     def add_data_to_table(self, point_num, voltage, current, resistance, power):
-        """添加數據到表格"""
+        """添加數據到表格 - 新格式：時間在第一欄，移除點#欄位"""
         row_count = self.data_table.rowCount()
         self.data_table.insertRow(row_count)
         
         timestamp = datetime.now().strftime("%H:%M:%S")
         
-        self.data_table.setItem(row_count, 0, QTableWidgetItem(f"{point_num:03d}"))
-        self.data_table.setItem(row_count, 1, QTableWidgetItem(f"{voltage:.6f}"))
-        self.data_table.setItem(row_count, 2, QTableWidgetItem(f"{current:.6f}"))
-        self.data_table.setItem(row_count, 3, QTableWidgetItem(f"{resistance:.2f}"))
-        self.data_table.setItem(row_count, 4, QTableWidgetItem(f"{power:.6f}"))
-        self.data_table.setItem(row_count, 5, QTableWidgetItem(timestamp))
+        # 新的欄位順序：[時間, 電壓, 電流, 電阻, 功率]
+        self.data_table.setItem(row_count, 0, QTableWidgetItem(timestamp))       # 時間移至第一欄
+        self.data_table.setItem(row_count, 1, QTableWidgetItem(f"{voltage:.6f}"))   # 電壓
+        self.data_table.setItem(row_count, 2, QTableWidgetItem(f"{current:.6f}"))   # 電流
+        self.data_table.setItem(row_count, 3, QTableWidgetItem(f"{resistance:.2f}")) # 電阻
+        self.data_table.setItem(row_count, 4, QTableWidgetItem(f"{power:.6f}"))     # 功率
         
         # 自動滾動
         if self.table_auto_scroll.isChecked():
