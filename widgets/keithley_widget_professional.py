@@ -196,15 +196,16 @@ class ProfessionalKeithleyWidget(QWidget):
         right_panel = self.create_display_panel()
         main_splitter.addWidget(right_panel)
         
-        # 設定分割比例 (4:6) - 給左側控制面板更多空間
-        main_splitter.setSizes([400, 600])
+        # 設定分割比例 (5:5) + 防止面板被完全收縮 - 給左側更多空間
+        main_splitter.setSizes([500, 500])
+        main_splitter.setChildrenCollapsible(False)  # 防止面板被完全收縮
         
     def create_control_panel(self):
         """創建左側控制面板 - 添加滾動支持解決GroupBox遮擋問題"""
-        # 主控制面板容器
+        # 主控制面板容器 - 增強寬度保護
         control_widget = QWidget()
-        control_widget.setMaximumWidth(350)
-        control_widget.setMinimumWidth(300)
+        control_widget.setMaximumWidth(380)  # 輕微放寬上限
+        control_widget.setMinimumWidth(350)  # 提高最小寬度保護
         
         # 創建滾動區域
         scroll_area = QScrollArea()
