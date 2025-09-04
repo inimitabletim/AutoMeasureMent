@@ -776,27 +776,32 @@ class ProfessionalKeithleyWidget(QWidget):
             
         
     def format_smart_value(self, value, unit_type=''):
-        """智能數值格式化 - 根據數值大小選擇最佳顯示方式"""
+        """工程單位格式化 - 使用m/u/n/p/k等工程前綴"""
         if value == 0:
             return f"0{unit_type}"
         
         abs_value = abs(value)
+        sign = '-' if value < 0 else ''
         
-        # 對於很小的數值使用科學記號
-        if abs_value < 1e-6:
-            return f"{value:.2e}{unit_type}"
-        # 對於小數值使用適當的小數位數
-        elif abs_value < 0.001:
-            return f"{value:.6f}{unit_type}"
-        elif abs_value < 0.01:
-            return f"{value:.5f}{unit_type}"
-        elif abs_value < 0.1:
-            return f"{value:.4f}{unit_type}"
-        elif abs_value < 10:
-            return f"{value:.4f}{unit_type}"
-        # 對於大數值使用較少小數位
+        # 工程單位前綴轉換
+        if abs_value >= 1e9:
+            return f"{sign}{abs_value/1e9:.3f}G{unit_type}"
+        elif abs_value >= 1e6:
+            return f"{sign}{abs_value/1e6:.3f}M{unit_type}"
+        elif abs_value >= 1e3:
+            return f"{sign}{abs_value/1e3:.3f}k{unit_type}"
+        elif abs_value >= 1:
+            return f"{sign}{abs_value:.4f}{unit_type}"
+        elif abs_value >= 1e-3:
+            return f"{sign}{abs_value*1e3:.3f}m{unit_type}"
+        elif abs_value >= 1e-6:
+            return f"{sign}{abs_value*1e6:.3f}u{unit_type}"
+        elif abs_value >= 1e-9:
+            return f"{sign}{abs_value*1e9:.3f}n{unit_type}"
+        elif abs_value >= 1e-12:
+            return f"{sign}{abs_value*1e12:.3f}p{unit_type}"
         else:
-            return f"{value:.3f}{unit_type}"
+            return f"{sign}{abs_value*1e15:.2f}f{unit_type}"
 
     def create_statistics_panel(self):
         """創建統計面板 - 簡化版本只顯示電壓、電流、功率"""
