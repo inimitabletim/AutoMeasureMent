@@ -969,7 +969,7 @@ class ProfessionalKeithleyWidget(QWidget):
         # 數據表格
         self.data_table = QTableWidget()
         self.data_table.setColumnCount(5)  # 移除點#欄位，減少一欄
-        self.data_table.setHorizontalHeaderLabels(["時間", "電壓 (V)", "電流 (A)", "電阻 (Ω)", "功率 (W)"])  # 時間移至第一欄，移除點#
+        self.data_table.setHorizontalHeaderLabels(["日期時間", "電壓 (V)", "電流 (A)", "電阻 (Ω)", "功率 (W)"])  # 時間移至第一欄，移除點#，包含日期
         
         # 設置表格屬性
         header = self.data_table.horizontalHeader()
@@ -1993,7 +1993,8 @@ class ProfessionalKeithleyWidget(QWidget):
         row_count = self.data_table.rowCount()
         self.data_table.insertRow(row_count)
         
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        # 使用緊湊的日期時間格式：MM-DD HH:MM:SS
+        timestamp = datetime.now().strftime("%m-%d %H:%M:%S")
         
         # 新的欄位順序：[時間, 電壓, 電流, 電阻, 功率]
         # 創建置中對齊的表格項目
