@@ -962,9 +962,8 @@ class ProfessionalKeithleyWidget(QWidget):
         
         chart_control.addWidget(self.chart_type_combo)
         
-        # 添加統計面板到chart_type_combo右側
-        self.stats_panel = self.create_statistics_panel()
-        chart_control.addWidget(self.stats_panel)
+        # 統計功能暫時移除，保持界面簡潔
+        # 未來需要時可考慮獨立的統計頁面或彈出視窗
         
         chart_control.addStretch()
         layout.addLayout(chart_control)
@@ -2238,8 +2237,8 @@ class ProfessionalKeithleyWidget(QWidget):
             self.measurement_status.setText(status_text)
             
             # 更新右側統計面板
-            if hasattr(self, 'stats_panel'):
-                self.update_statistics_panel(duration, total_points)
+            # 統計面板更新已移除，保持界面簡潔
+            pass
             
         except Exception as e:
             self.logger.debug(f"運行時間更新錯誤: {e}")
