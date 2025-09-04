@@ -779,9 +779,10 @@ class ProfessionalKeithleyWidget(QWidget):
         """創建統計面板 - 簡化版本只顯示電壓、電流、功率"""
         stats_frame = QFrame()
         stats_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        stats_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        stats_frame.setMaximumWidth(650)
-        stats_frame.setMinimumWidth(500)
+        stats_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        # 移除寬度限制，讓統計面板完全展開顯示
+        # stats_frame.setMaximumWidth(650)
+        # stats_frame.setMinimumWidth(500)
         
         layout = QHBoxLayout(stats_frame)
         layout.setContentsMargins(8, 3, 8, 3)
