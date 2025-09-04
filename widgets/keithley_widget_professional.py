@@ -174,6 +174,12 @@ class ProfessionalKeithleyWidget(QWidget):
         # 統計數據緩存
         self._last_avg_voltage = None
         
+        # 本地滾動統計緩存（最近100個數據點）
+        self._voltage_buffer = []
+        self._current_buffer = []
+        self._power_buffer = []
+        self.buffer_size = 100
+        
         # 懸浮設定面板
         self.floating_settings = None
         self.instrument_settings = {}
@@ -872,29 +878,69 @@ class ProfessionalKeithleyWidget(QWidget):
             else:
                 self.stats_current_label.setText("統計電流: --A")
                 
-            # 更新統計功率
-            if (hasattr(self, '_last_voltage_stats') and self._last_voltage_stats is not None and 
-                hasattr(self, '_last_current_stats') and self._last_current_stats is not None):
-                v_mean = self._last_voltage_stats.get('mean', 0)
-                i_mean = self._last_current_stats.get('mean', 0)
-                v_max = self._last_voltage_stats.get('max', 0)
-                i_max = self._last_current_stats.get('max', 0)
-                v_min = self._last_voltage_stats.get('min', 0)
-                i_min = self._last_current_stats.get('min', 0)
-                
-                avg_power = abs(v_mean * i_mean)
-                max_power = max(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
-                min_power = min(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
-                
-                avg_str = self.format_smart_value(avg_power, 'W')
-                max_str = self.format_smart_value(max_power, 'W')
-                min_str = self.format_smart_value(min_power, 'W')
-                self.stats_power_label.setText(f"統計功率: {avg_str} (↑{max_str} ↓{min_str})")
+            # 更新統計功率 - 使用直接統計的功率數據
+            if (hasattr(self, '_last_power_stats') and self._last_power_stats is not None):
+                stats = self._last_power_stats
+                mean = stats.get('mean', 0)
+                max_val = stats.get('max', 0)
+                min_val = stats.get('min', 0)
+                mean_str = self.format_smart_value(mean, 'W')
+                max_str = self.format_smart_value(max_val, 'W')
+                min_str = self.format_smart_value(min_val, 'W')
+                self.stats_power_label.setText(f"統計功率: {mean_str} (↑{max_str} ↓{min_str})")
             else:
                 self.stats_power_label.setText("統計功率: --W")
                 
         except Exception as e:
             self.logger.debug(f"統計面板更新錯誤: {e}")
+    
+    def _update_local_statistics(self, voltage, current, power):
+        """更新本地統計緩存 - 高效的滾動窗口統計"""
+        # 添加新數據到緩存
+        self._voltage_buffer.append(voltage)
+        self._current_buffer.append(current) 
+        self._power_buffer.append(power)
+        
+        # 保持緩存大小
+        if len(self._voltage_buffer) > self.buffer_size:
+            self._voltage_buffer.pop(0)
+        if len(self._current_buffer) > self.buffer_size:
+            self._current_buffer.pop(0)
+        if len(self._power_buffer) > self.buffer_size:
+            self._power_buffer.pop(0)
+            
+        # 計算統計數據（需要至少5個數據點）
+        if len(self._voltage_buffer) >= 5:
+            import statistics
+            
+            # 電壓統計
+            self._last_voltage_stats = {
+                'mean': statistics.mean(self._voltage_buffer),
+                'max': max(self._voltage_buffer),
+                'min': min(self._voltage_buffer),
+                'count': len(self._voltage_buffer)
+            }
+            
+            # 電流統計
+            self._last_current_stats = {
+                'mean': statistics.mean(self._current_buffer),
+                'max': max(self._current_buffer),
+                'min': min(self._current_buffer),
+                'count': len(self._current_buffer)
+            }
+            
+            # 功率統計
+            self._last_power_stats = {
+                'mean': statistics.mean(self._power_buffer),
+                'max': max(self._power_buffer),
+                'min': min(self._power_buffer),
+                'count': len(self._power_buffer)
+            }
+        else:
+            # 數據不足時清空統計
+            self._last_voltage_stats = None
+            self._last_current_stats = None
+            self._last_power_stats = None
 
     def create_chart_tab(self):
         """創建圖表分頁"""
@@ -1928,6 +1974,9 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 存儲數據
         self.time_series_data.append((current_time, voltage, current, resistance, power))
+        
+        # 更新本地統計緩存
+        self._update_local_statistics(voltage, current, power)
         
         # 更新LCD顯示 - 使用工程計數法格式
         v_val, v_unit = self.format_engineering_value(voltage, 'V')
