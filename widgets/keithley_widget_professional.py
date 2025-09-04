@@ -775,6 +775,89 @@ class ProfessionalKeithleyWidget(QWidget):
         
             
         
+    def create_statistics_panel(self):
+        """創建統計面板 - 簡化版本只顯示電壓、電流、功率"""
+        stats_frame = QFrame()
+        stats_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        stats_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        stats_frame.setMaximumWidth(600)
+        stats_frame.setMinimumWidth(400)
+        
+        layout = QHBoxLayout(stats_frame)
+        layout.setContentsMargins(8, 3, 8, 3)
+        layout.setSpacing(12)
+        
+        # 統計電壓標籤
+        self.stats_voltage_label = QLabel("統計電壓: --V")
+        self.stats_voltage_label.setStyleSheet("color: #FF9800; font-weight: bold; font-size: 11px;")
+        layout.addWidget(self.stats_voltage_label)
+        
+        # 分隔線
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.Shape.VLine)
+        layout.addWidget(separator1)
+        
+        # 統計電流標籤
+        self.stats_current_label = QLabel("統計電流: --A")
+        self.stats_current_label.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 11px;")
+        layout.addWidget(self.stats_current_label)
+        
+        # 分隔線
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.Shape.VLine)
+        layout.addWidget(separator2)
+        
+        # 統計功率標籤
+        self.stats_power_label = QLabel("統計功率: --W")
+        self.stats_power_label.setStyleSheet("color: #9C27B0; font-weight: bold; font-size: 11px;")
+        layout.addWidget(self.stats_power_label)
+        
+        return stats_frame
+    
+    def update_statistics_panel(self, duration, total_points):
+        """更新統計面板內容 - 增強版本包含最大最小值"""
+        try:
+            # 更新統計電壓
+            if (hasattr(self, '_last_voltage_stats') and self._last_voltage_stats is not None):
+                stats = self._last_voltage_stats
+                mean = stats.get('mean', 0)
+                max_val = stats.get('max', 0)
+                min_val = stats.get('min', 0)
+                self.stats_voltage_label.setText(f"統計電壓: {mean:.3f}V (↑{max_val:.3f} ↓{min_val:.3f})")
+            else:
+                self.stats_voltage_label.setText("統計電壓: --V")
+            
+            # 更新統計電流
+            if (hasattr(self, '_last_current_stats') and self._last_current_stats is not None):
+                stats = self._last_current_stats
+                mean = stats.get('mean', 0)
+                max_val = stats.get('max', 0)
+                min_val = stats.get('min', 0)
+                self.stats_current_label.setText(f"統計電流: {mean:.3f}A (↑{max_val:.3f} ↓{min_val:.3f})")
+            else:
+                self.stats_current_label.setText("統計電流: --A")
+                
+            # 更新統計功率
+            if (hasattr(self, '_last_voltage_stats') and self._last_voltage_stats is not None and 
+                hasattr(self, '_last_current_stats') and self._last_current_stats is not None):
+                v_mean = self._last_voltage_stats.get('mean', 0)
+                i_mean = self._last_current_stats.get('mean', 0)
+                v_max = self._last_voltage_stats.get('max', 0)
+                i_max = self._last_current_stats.get('max', 0)
+                v_min = self._last_voltage_stats.get('min', 0)
+                i_min = self._last_current_stats.get('min', 0)
+                
+                avg_power = abs(v_mean * i_mean)
+                max_power = max(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
+                min_power = min(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
+                
+                self.stats_power_label.setText(f"統計功率: {avg_power:.3f}W (↑{max_power:.3f} ↓{min_power:.3f})")
+            else:
+                self.stats_power_label.setText("統計功率: --W")
+                
+        except Exception as e:
+            self.logger.debug(f"統計面板更新錯誤: {e}")
+
     def create_chart_tab(self):
         """創建圖表分頁"""
         tab_widget = QWidget()
@@ -790,10 +873,14 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 調整chart_type_combo的放大設定
         self.chart_type_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        self.chart_type_combo.setMinimumWidth(140)  # 確保有足夠寬度顯示完整文字
+        self.chart_type_combo.setMinimumWidth(145)  # 確保有足夠寬度顯示完整文字
         self.chart_type_combo.view().setMinimumWidth(130)  # 設定下拉選單的最小寬度
         
         chart_control.addWidget(self.chart_type_combo)
+        
+        # 添加統計面板到chart_type_combo右側
+        self.stats_panel = self.create_statistics_panel()
+        chart_control.addWidget(self.stats_panel)
         
         chart_control.addStretch()
         layout.addLayout(chart_control)
@@ -1922,7 +2009,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.log_message(f"💾 {message}")
         
     def update_runtime_display(self):
-        """使用QTimer更新運行時間顯示"""
+        """使用QTimer更新運行時間顯示 - 簡化版本"""
         if not self.is_measuring or not hasattr(self, 'start_time') or not self.start_time:
             return
             
@@ -1939,27 +2026,34 @@ class ProfessionalKeithleyWidget(QWidget):
             else:
                 total_points = len(self.time_series_data) if hasattr(self, 'time_series_data') else 0
             
-            # 構建狀態文字
-            status_text = f"📊 數據點: {total_points} | 運行時間: {hours:02d}:{minutes:02d}:{seconds:02d}"
-            
-            # 如果有最近的統計數據，添加平均值顯示
-            if hasattr(self, '_last_avg_voltage') and self._last_avg_voltage is not None:
-                status_text += f" | 平均電壓: {self._last_avg_voltage:.3f}V"
+            # 簡化的狀態文字
+            status_text = f"📊 數據點: {total_points} | ⏱️ 運行: {hours:02d}:{minutes:02d}:{seconds:02d}"
             
             self.measurement_status.setText(status_text)
+            
+            # 更新右側統計面板
+            if hasattr(self, 'stats_panel'):
+                self.update_statistics_panel(duration, total_points)
             
         except Exception as e:
             self.logger.debug(f"運行時間更新錯誤: {e}")
     
     def on_statistics_updated(self, stats):
-        """處理統計數據更新信號"""
+        """處理統計數據更新信號 - 增強版本處理完整統計資訊"""
         try:
-            # 保存統計數據供QTimer使用
+            # 保存完整的電壓統計數據
             voltage_stats = stats.get('voltage', {})
             if voltage_stats.get('count', 0) > 0:
-                self._last_avg_voltage = voltage_stats.get('mean', 0)
+                self._last_voltage_stats = voltage_stats
             else:
-                self._last_avg_voltage = None
+                self._last_voltage_stats = None
+            
+            # 保存完整的電流統計數據
+            current_stats = stats.get('current', {})
+            if current_stats.get('count', 0) > 0:
+                self._last_current_stats = current_stats
+            else:
+                self._last_current_stats = None
                 
         except Exception as e:
             self.logger.error(f"統計更新錯誤: {e}")
