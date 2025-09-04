@@ -51,7 +51,7 @@ class InstrumentStatusWidget(QFrame):
         layout.addStretch()
         
         # 控制按鈕
-        self.disconnect_all_btn = QPushButton("🔌 正常斷開")
+        self.disconnect_all_btn = QPushButton("正常斷開")
         self.disconnect_all_btn.setMaximumWidth(110)
         self.disconnect_all_btn.setToolTip("正常結束測量並斷開所有儀器連接")
         self.disconnect_all_btn.clicked.connect(self.disconnect_all)
@@ -70,7 +70,7 @@ class InstrumentStatusWidget(QFrame):
         """)
         layout.addWidget(self.disconnect_all_btn)
         
-        self.emergency_stop_btn = QPushButton("🛑 緊急停止")
+        self.emergency_stop_btn = QPushButton("緊急停止")
         self.emergency_stop_btn.setMaximumWidth(110)
         self.emergency_stop_btn.setToolTip("雙擊執行緊急停止，防止誤觸")
         self.emergency_stop_btn.clicked.connect(self.emergency_stop_handler)
@@ -232,7 +232,7 @@ class InstrumentStatusWidget(QFrame):
         if not self.emergency_stop_armed:
             # 第一次點擊：警告狀態
             self.emergency_stop_armed = True
-            self.emergency_stop_btn.setText("⚠️ 再次點擊確認")
+            self.emergency_stop_btn.setText("再次點擊確認")
             self.emergency_stop_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #f39c12;
@@ -261,7 +261,7 @@ class InstrumentStatusWidget(QFrame):
     def reset_emergency_button(self):
         """重置緊急停止按鈕狀態"""
         self.emergency_stop_armed = False
-        self.emergency_stop_btn.setText("🛑 緊急停止")
+        self.emergency_stop_btn.setText("緊急停止")
         self.emergency_stop_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
