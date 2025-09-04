@@ -1246,17 +1246,79 @@ class ProfessionalKeithleyWidget(QWidget):
         else:
             # 基本斷線邏輯（後備方案）
             try:
+                # 1. 停止所有測量
+                if hasattr(self, 'stop_measurement'):
+                    self.stop_measurement()
+                
+                # 2. 關閉儀器輸出
                 if self.keithley and self.keithley.connected:
                     self.keithley.output_off()
                     self.keithley.disconnect()
                     
+                # 3. 重置儀器實例
                 self.keithley = None
+                
+                # 4. 重置UI狀態
+                self._reset_ui_to_disconnected_state()
+                
+                # 5. 發送斷開信號
                 self.connection_changed.emit(False, "")
                 self.log_message("✅ 設備已斷開連接")
                 
             except Exception as e:
                 self.log_message(f"❌ 斷開連接時發生錯誤: {e}")
+                # 即使出錯也要重置UI狀態
+                self._reset_ui_to_disconnected_state()
+                self.connection_changed.emit(False, "")
     
+    def _reset_ui_to_disconnected_state(self):
+        """重置UI到斷線狀態 - 確保全部斷開和緊急停止的完整連動"""
+        try:
+            # 重置按鈕狀態
+            if hasattr(self, 'start_btn'):
+                self.start_btn.setEnabled(False)
+                self.start_btn.setText("▶️ 開始測量")
+            
+            if hasattr(self, 'stop_btn'):
+                self.stop_btn.setEnabled(False)
+            
+            # 重置測量狀態顯示
+            if hasattr(self, 'measurement_status'):
+                self.measurement_status.setText("⏸️ 待機中")
+                self.update_status_style('idle')
+            
+            # 隱藏進度條
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(False)
+                self.progress_bar.setValue(0)
+            
+            # 重置連接狀態顯示
+            if hasattr(self, 'connection_status_widget'):
+                self.connection_status_widget.set_connection_failed_state("未連接")
+            
+            # 清除LCD顯示
+            if hasattr(self, 'voltage_display'):
+                self.voltage_display.display(0)
+            if hasattr(self, 'current_display'):
+                self.current_display.display(0)
+            if hasattr(self, 'power_display'):
+                self.power_display.display(0)
+            if hasattr(self, 'resistance_display'):
+                self.resistance_display.display(0)
+            
+            # 重置統計面板
+            if hasattr(self, 'stats_voltage_label'):
+                self.stats_voltage_label.setText("統計電壓: --V")
+            if hasattr(self, 'stats_current_label'):
+                self.stats_current_label.setText("統計電流: --A")
+            if hasattr(self, 'stats_power_label'):
+                self.stats_power_label.setText("統計功率: --W")
+            
+            self.log_message("🔄 UI狀態已重置為斷線狀態")
+            
+        except Exception as e:
+            self.log_message(f"⚠️ UI重置時發生錯誤: {e}")
+
     # ==================== 新的非阻塞式連線方法 ====================
     
     def _handle_connection_request(self):
