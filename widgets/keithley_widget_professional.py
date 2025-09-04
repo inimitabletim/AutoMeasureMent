@@ -1508,8 +1508,8 @@ class ProfessionalKeithleyWidget(QWidget):
         if hasattr(self, 'connection_worker') and self.connection_worker:
             self.keithley = self.connection_worker.instrument
             
-        # 更新UI狀態 - 只顯示"已連接"避免文字過長
-        self.connection_status_widget.set_connected_state("已連接")
+        # 更新UI狀態 - 顯示設備型號，簡潔且具體
+        self.connection_status_widget.set_connected_state("Keithley 2461")
         self._update_input_controls_state("connected")  # 設定已連接的控件狀態
         
         if hasattr(self, 'start_btn'):
