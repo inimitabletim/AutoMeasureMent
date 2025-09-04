@@ -1146,24 +1146,16 @@ class ProfessionalKeithleyWidget(QWidget):
                 'timeout': 5.0  # 5秒超時
             }
             
-            # 使用統一的連接Worker - 與base class一致
-            from src.workers import ConnectionWorker
-            from src.keithley_2461 import Keithley2461
-            
-            # 創建Keithley設備實例
-            keithley_device = Keithley2461()
-            
-            # 創建並配置連接工作線程
-            self.connection_worker = ConnectionWorker(keithley_device, connection_params)
+            worker = self.connection_manager.start_connection('keithley', connection_params)
             
             # 連接工作執行緒信號
-            self.connection_worker.connection_started.connect(self._on_connection_started)
-            self.connection_worker.progress_updated.connect(lambda p: self._on_connection_progress(f"進度: {p}%"))
-            self.connection_worker.connection_success.connect(lambda name, info: self._on_connection_success(info.get('identity', '已連接')))
-            self.connection_worker.connection_failed.connect(lambda err_type, msg: self._on_connection_failed(msg))
+            worker.connection_started.connect(self._on_connection_started)
+            worker.connection_progress.connect(self._on_connection_progress)
+            worker.connection_success.connect(self._on_connection_success)
+            worker.connection_failed.connect(self._on_connection_failed)
             
             # 啟動工作執行緒
-            self.connection_worker.start()
+            worker.start()
             
         except RuntimeError as e:
             self.connection_status_widget.set_connection_failed_state(str(e))
@@ -1207,8 +1199,7 @@ class ProfessionalKeithleyWidget(QWidget):
             
     def _handle_connection_cancel(self):
         """處理連線取消"""
-        if hasattr(self, 'connection_worker') and self.connection_worker:
-            self.connection_worker.request_stop()
+        self.connection_manager.cancel_connection()
         self.connection_status_widget.set_disconnected_state()
         self.log_message("⚠️ 用戶取消連線")
         
@@ -1224,9 +1215,10 @@ class ProfessionalKeithleyWidget(QWidget):
         
     def _on_connection_success(self, device_info: str):
         """連線成功回調"""
-        # 獲取儀器實例 - ConnectionWorker儲存在.instrument屬性中
-        if hasattr(self, 'connection_worker') and self.connection_worker:
-            self.keithley = self.connection_worker.instrument
+        # 獲取儀器實例
+        worker = self.connection_manager.connection_worker
+        if worker:
+            self.keithley = worker.get_instrument()
             
         # 更新UI狀態
         device_name = device_info.split('\n')[0] if device_info else ""
