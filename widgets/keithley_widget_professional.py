@@ -775,6 +775,29 @@ class ProfessionalKeithleyWidget(QWidget):
         
             
         
+    def format_smart_value(self, value, unit_type=''):
+        """智能數值格式化 - 根據數值大小選擇最佳顯示方式"""
+        if value == 0:
+            return f"0{unit_type}"
+        
+        abs_value = abs(value)
+        
+        # 對於很小的數值使用科學記號
+        if abs_value < 1e-6:
+            return f"{value:.2e}{unit_type}"
+        # 對於小數值使用適當的小數位數
+        elif abs_value < 0.001:
+            return f"{value:.6f}{unit_type}"
+        elif abs_value < 0.01:
+            return f"{value:.5f}{unit_type}"
+        elif abs_value < 0.1:
+            return f"{value:.4f}{unit_type}"
+        elif abs_value < 10:
+            return f"{value:.4f}{unit_type}"
+        # 對於大數值使用較少小數位
+        else:
+            return f"{value:.3f}{unit_type}"
+
     def create_statistics_panel(self):
         """創建統計面板 - 簡化版本只顯示電壓、電流、功率"""
         stats_frame = QFrame()
@@ -824,7 +847,10 @@ class ProfessionalKeithleyWidget(QWidget):
                 mean = stats.get('mean', 0)
                 max_val = stats.get('max', 0)
                 min_val = stats.get('min', 0)
-                self.stats_voltage_label.setText(f"統計電壓: {mean:.5f}V (↑{max_val:.5f} ↓{min_val:.5f})")
+                mean_str = self.format_smart_value(mean, 'V')
+                max_str = self.format_smart_value(max_val, 'V')
+                min_str = self.format_smart_value(min_val, 'V')
+                self.stats_voltage_label.setText(f"統計電壓: {mean_str} (↑{max_str} ↓{min_str})")
             else:
                 self.stats_voltage_label.setText("統計電壓: --V")
             
@@ -834,7 +860,10 @@ class ProfessionalKeithleyWidget(QWidget):
                 mean = stats.get('mean', 0)
                 max_val = stats.get('max', 0)
                 min_val = stats.get('min', 0)
-                self.stats_current_label.setText(f"統計電流: {mean:.6f}A (↑{max_val:.6f} ↓{min_val:.6f})")
+                mean_str = self.format_smart_value(mean, 'A')
+                max_str = self.format_smart_value(max_val, 'A')
+                min_str = self.format_smart_value(min_val, 'A')
+                self.stats_current_label.setText(f"統計電流: {mean_str} (↑{max_str} ↓{min_str})")
             else:
                 self.stats_current_label.setText("統計電流: --A")
                 
@@ -852,7 +881,10 @@ class ProfessionalKeithleyWidget(QWidget):
                 max_power = max(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
                 min_power = min(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
                 
-                self.stats_power_label.setText(f"統計功率: {avg_power:.6f}W (↑{max_power:.6f} ↓{min_power:.6f})")
+                avg_str = self.format_smart_value(avg_power, 'W')
+                max_str = self.format_smart_value(max_power, 'W')
+                min_str = self.format_smart_value(min_power, 'W')
+                self.stats_power_label.setText(f"統計功率: {avg_str} (↑{max_str} ↓{min_str})")
             else:
                 self.stats_power_label.setText("統計功率: --W")
                 
