@@ -785,23 +785,23 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 工程單位前綴轉換
         if abs_value >= 1e9:
-            return f"{sign}{abs_value/1e9:.3f}G{unit_type}"
+            return f"{sign}{abs_value/1e9:.4f}G{unit_type}"
         elif abs_value >= 1e6:
-            return f"{sign}{abs_value/1e6:.3f}M{unit_type}"
+            return f"{sign}{abs_value/1e6:.4f}M{unit_type}"
         elif abs_value >= 1e3:
-            return f"{sign}{abs_value/1e3:.3f}k{unit_type}"
+            return f"{sign}{abs_value/1e3:.4f}k{unit_type}"
         elif abs_value >= 1:
-            return f"{sign}{abs_value:.4f}{unit_type}"
+            return f"{sign}{abs_value:.5f}{unit_type}"
         elif abs_value >= 1e-3:
-            return f"{sign}{abs_value*1e3:.3f}m{unit_type}"
+            return f"{sign}{abs_value*1e3:.4f}m{unit_type}"
         elif abs_value >= 1e-6:
-            return f"{sign}{abs_value*1e6:.3f}u{unit_type}"
+            return f"{sign}{abs_value*1e6:.4f}u{unit_type}"
         elif abs_value >= 1e-9:
-            return f"{sign}{abs_value*1e9:.3f}n{unit_type}"
+            return f"{sign}{abs_value*1e9:.4f}n{unit_type}"
         elif abs_value >= 1e-12:
-            return f"{sign}{abs_value*1e12:.3f}p{unit_type}"
+            return f"{sign}{abs_value*1e12:.4f}p{unit_type}"
         else:
-            return f"{sign}{abs_value*1e15:.2f}f{unit_type}"
+            return f"{sign}{abs_value*1e15:.5f}f{unit_type}"
 
     def create_statistics_panel(self):
         """創建統計面板 - 簡化版本只顯示電壓、電流、功率"""
