@@ -1228,9 +1228,8 @@ class ProfessionalKeithleyWidget(QWidget):
         if hasattr(self, 'connection_worker') and self.connection_worker:
             self.keithley = self.connection_worker.instrument
             
-        # 更新UI狀態
-        device_name = device_info.split('\n')[0] if device_info else ""
-        self.connection_status_widget.set_connected_state(device_name)
+        # 更新UI狀態 - 只顯示"已連接"避免文字過長
+        self.connection_status_widget.set_connected_state("已連接")
         
         if hasattr(self, 'start_btn'):
             self.start_btn.setEnabled(True)
