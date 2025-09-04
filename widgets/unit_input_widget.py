@@ -6,8 +6,8 @@
 
 from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QLineEdit, QComboBox, 
                             QLabel, QCompleter)
-from PyQt6.QtCore import pyqtSignal, QStringListModel
-from PyQt6.QtGui import QValidator, QRegularExpressionValidator
+from PyQt6.QtCore import pyqtSignal, QStringListModel, Qt
+from PyQt6.QtGui import QValidator, QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression
 from typing import Optional
 from src.unit_converter import UnitConverter
@@ -52,6 +52,12 @@ class UnitInputWidget(QWidget):
         number_regex = QRegularExpression(r'^-?\d*\.?\d*$')
         validator = QRegularExpressionValidator(number_regex)
         self.value_edit.setValidator(validator)
+        
+        # 添加清除按鈕 - 簡潔版
+        clear_action = QAction(self.value_edit)
+        clear_action.setIcon(self.value_edit.style().standardIcon(self.value_edit.style().StandardPixmap.SP_LineEditClearButton))
+        clear_action.triggered.connect(lambda: self.value_edit.clear())
+        self.value_edit.addAction(clear_action, QLineEdit.ActionPosition.TrailingPosition)
         
         # 連接信號
         self.value_edit.textChanged.connect(self.on_value_changed)
