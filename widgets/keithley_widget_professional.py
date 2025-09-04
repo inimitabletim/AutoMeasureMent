@@ -980,6 +980,14 @@ class ProfessionalKeithleyWidget(QWidget):
         # 隱藏行號索引（左側的行號）
         self.data_table.verticalHeader().setVisible(False)
         
+        # 設置表格內容置中對齊
+        self.data_table.setStyleSheet("""
+            QTableWidget::item {
+                text-align: center;
+                padding: 4px;
+            }
+        """)
+        
         layout.addWidget(self.data_table)
         
         return tab_widget
@@ -1988,11 +1996,26 @@ class ProfessionalKeithleyWidget(QWidget):
         timestamp = datetime.now().strftime("%H:%M:%S")
         
         # 新的欄位順序：[時間, 電壓, 電流, 電阻, 功率]
-        self.data_table.setItem(row_count, 0, QTableWidgetItem(timestamp))       # 時間移至第一欄
-        self.data_table.setItem(row_count, 1, QTableWidgetItem(f"{voltage:.6f}"))   # 電壓
-        self.data_table.setItem(row_count, 2, QTableWidgetItem(f"{current:.6f}"))   # 電流
-        self.data_table.setItem(row_count, 3, QTableWidgetItem(f"{resistance:.3f}")) # 電阻 - 提高精度至3位小數
-        self.data_table.setItem(row_count, 4, QTableWidgetItem(f"{power:.6f}"))     # 功率
+        # 創建置中對齊的表格項目
+        time_item = QTableWidgetItem(timestamp)
+        time_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_table.setItem(row_count, 0, time_item)
+        
+        voltage_item = QTableWidgetItem(f"{voltage:.6f}")
+        voltage_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_table.setItem(row_count, 1, voltage_item)
+        
+        current_item = QTableWidgetItem(f"{current:.6f}")
+        current_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_table.setItem(row_count, 2, current_item)
+        
+        resistance_item = QTableWidgetItem(f"{resistance:.3f}")
+        resistance_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_table.setItem(row_count, 3, resistance_item)
+        
+        power_item = QTableWidgetItem(f"{power:.6f}")
+        power_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.data_table.setItem(row_count, 4, power_item)
         
         # 自動滾動
         if self.table_auto_scroll.isChecked():
