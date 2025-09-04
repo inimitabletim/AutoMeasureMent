@@ -779,6 +779,12 @@ class ProfessionalKeithleyWidget(QWidget):
         self.chart_type_combo = QComboBox()
         self.chart_type_combo.addItems(["電壓時間序列", "電流時間序列"])  # 移除有問題的功率曲線
         self.chart_type_combo.currentTextChanged.connect(self.update_chart_display)
+        
+        # 調整chart_type_combo的放大設定
+        self.chart_type_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.chart_type_combo.setMinimumWidth(140)  # 確保有足夠寬度顯示完整文字
+        self.chart_type_combo.view().setMinimumWidth(130)  # 設定下拉選單的最小寬度
+        
         chart_control.addWidget(self.chart_type_combo)
         
         chart_control.addStretch()

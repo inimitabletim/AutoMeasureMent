@@ -57,7 +57,7 @@ class UnitInputWidget(QWidget):
         self.value_edit.textChanged.connect(self.on_value_changed)
         self.value_edit.editingFinished.connect(self.on_editing_finished)
         
-        layout.addWidget(self.value_edit, 1)
+        layout.addWidget(self.value_edit, 7)  # TextField佔70%空間
         
         # 前綴選擇下拉框 - 簡化範圍 (k到n)
         self.prefix_combo = QComboBox()
@@ -81,7 +81,7 @@ class UnitInputWidget(QWidget):
         
         self.prefix_combo.currentTextChanged.connect(self.on_prefix_changed)
         
-        layout.addWidget(self.prefix_combo)
+        layout.addWidget(self.prefix_combo, 3)  # ComboBox佔30%空間
         
     def on_value_changed(self, text: str):
         """數值改變時的處理 - 簡化版"""
