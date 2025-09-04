@@ -780,8 +780,8 @@ class ProfessionalKeithleyWidget(QWidget):
         stats_frame = QFrame()
         stats_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         stats_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        stats_frame.setMaximumWidth(600)
-        stats_frame.setMinimumWidth(400)
+        stats_frame.setMaximumWidth(450)
+        stats_frame.setMinimumWidth(300)
         
         layout = QHBoxLayout(stats_frame)
         layout.setContentsMargins(8, 3, 8, 3)
@@ -789,7 +789,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 統計電壓標籤
         self.stats_voltage_label = QLabel("統計電壓: --V")
-        self.stats_voltage_label.setStyleSheet("color: #FF9800; font-weight: bold; font-size: 11px;")
+        self.stats_voltage_label.setStyleSheet("color: #FF9800; font-weight: bold; font-size: 14px;")
         layout.addWidget(self.stats_voltage_label)
         
         # 分隔線
@@ -799,7 +799,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 統計電流標籤
         self.stats_current_label = QLabel("統計電流: --A")
-        self.stats_current_label.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 11px;")
+        self.stats_current_label.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 14px;")
         layout.addWidget(self.stats_current_label)
         
         # 分隔線
@@ -809,7 +809,7 @@ class ProfessionalKeithleyWidget(QWidget):
         
         # 統計功率標籤
         self.stats_power_label = QLabel("統計功率: --W")
-        self.stats_power_label.setStyleSheet("color: #9C27B0; font-weight: bold; font-size: 11px;")
+        self.stats_power_label.setStyleSheet("color: #9C27B0; font-weight: bold; font-size: 14px;")
         layout.addWidget(self.stats_power_label)
         
         return stats_frame

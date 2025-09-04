@@ -28,6 +28,7 @@ def check_dependencies():
         
     if missing_deps:
         try:
+            
             print("❌ 缺少必要依賴套件:")
         except:
             print("[ERROR] 缺少必要依賴套件:")
