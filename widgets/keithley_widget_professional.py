@@ -217,8 +217,8 @@ class ProfessionalKeithleyWidget(QWidget):
         # 滾動內容容器
         scroll_content = QWidget()
         layout = QVBoxLayout(scroll_content)
-        # layout.setContentsMargins(5, 5, 5, 5)  # 添加適當的邊距
-        # layout.setSpacing(3)  # 設置統一的間距，減少GroupBox之間的空隙
+        layout.setContentsMargins(5, 5, 5, 5)  # 添加適當的邊距
+        layout.setSpacing(3)  # 設置統一的間距，減少GroupBox之間的空隙
         
         # ===== 設備連接 =====
         connection_group = self.create_connection_group()
