@@ -202,8 +202,8 @@ class ProfessionalKeithleyWidget(QWidget):
         right_panel = self.create_display_panel()
         main_splitter.addWidget(right_panel)
         
-        # 設定分割比例 (5:5) + 防止面板被完全收縮 - 給左側更多空間
-        main_splitter.setSizes([500, 500])
+        # 設定分割比例 (6:4) + 防止面板被完全收縮 - 給左側更多空間顯示統計信息
+        main_splitter.setSizes([600, 400])
         main_splitter.setChildrenCollapsible(False)  # 防止面板被完全收縮
         
     def create_control_panel(self):
