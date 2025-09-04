@@ -1331,6 +1331,9 @@ class ProfessionalKeithleyWidget(QWidget):
     def _reset_ui_to_disconnected_state(self):
         """重置UI到斷線狀態 - 確保全部斷開和緊急停止的完整連動"""
         try:
+            # 重置輸入控件狀態為未連接
+            self._update_input_controls_state("disconnected")
+            
             # 重置按鈕狀態
             if hasattr(self, 'start_btn'):
                 self.start_btn.setEnabled(False)
@@ -1464,9 +1467,34 @@ class ProfessionalKeithleyWidget(QWidget):
         self.connection_status_widget.set_disconnected_state()
         self.log_message("⚠️ 用戶取消連線")
         
+    def _update_input_controls_state(self, state: str):
+        """統一管理輸入控件的啟用狀態
+        
+        Args:
+            state: 'disconnected', 'connecting', 'connected'
+        """
+        if state == "connecting":
+            # 連接中：禁用可能影響連接安全的控制
+            self.ip_input.setEnabled(False)           # IP不能在連接中修改
+            self.current_limit.set_enabled(False)     # 安全限制不能在連接中修改  
+            self.output_voltage.set_enabled(True)     # 電壓輸出保持可用
+            
+        elif state == "connected":
+            # 已連接：啟用所有控制，允許即時調整
+            self.ip_input.setEnabled(True)            # 可以修改IP準備下次連接
+            self.current_limit.set_enabled(True)      # 可以調整安全限制
+            self.output_voltage.set_enabled(True)     # 可以即時調整電壓
+            
+        else:  # disconnected
+            # 未連接：全部啟用，讓用戶設定參數
+            self.ip_input.setEnabled(True)
+            self.current_limit.set_enabled(True)
+            self.output_voltage.set_enabled(True)
+    
     def _on_connection_started(self):
         """連線開始回調"""
         self.connection_status_widget.set_connecting_state()
+        self._update_input_controls_state("connecting")  # 設定連接中的控件狀態
         self.log_message("🔄 開始連線儀器...")
         
     def _on_connection_progress(self, message: str):
@@ -1482,6 +1510,7 @@ class ProfessionalKeithleyWidget(QWidget):
             
         # 更新UI狀態 - 只顯示"已連接"避免文字過長
         self.connection_status_widget.set_connected_state("已連接")
+        self._update_input_controls_state("connected")  # 設定已連接的控件狀態
         
         if hasattr(self, 'start_btn'):
             self.start_btn.setEnabled(True)
@@ -1497,6 +1526,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def _on_connection_failed(self, error_message: str):
         """連線失敗回調"""
         self.connection_status_widget.set_connection_failed_state(error_message)
+        self._update_input_controls_state("disconnected")  # 設定失敗後的控件狀態
         self.keithley = None
         
         if hasattr(self, 'start_btn'):
