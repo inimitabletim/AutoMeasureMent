@@ -72,8 +72,8 @@ class InstrumentStatusWidget(QFrame):
         
         self.emergency_stop_btn = QPushButton("🛑 緊急停止")
         self.emergency_stop_btn.setMaximumWidth(110)
-        self.emergency_stop_btn.setToolTip("立即停止所有輸出，用於緊急情況")
-        self.emergency_stop_btn.clicked.connect(self.emergency_stop)
+        self.emergency_stop_btn.setToolTip("雙擊執行緊急停止，防止誤觸")
+        self.emergency_stop_btn.clicked.connect(self.emergency_stop_handler)
         self.emergency_stop_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
@@ -90,6 +90,12 @@ class InstrumentStatusWidget(QFrame):
             }
         """)
         layout.addWidget(self.emergency_stop_btn)
+        
+        # 緊急停止防誤觸狀態管理
+        self.emergency_stop_armed = False
+        self.emergency_timer = QTimer()
+        self.emergency_timer.setSingleShot(True)
+        self.emergency_timer.timeout.connect(self.reset_emergency_button)
         
         # 設置框架樣式
         self.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -220,6 +226,58 @@ class InstrumentStatusWidget(QFrame):
             msg.setWindowTitle("🛑 緊急停止")
             msg.setText("未發現需要緊急停止的活動設備")
             msg.show()
+    
+    def emergency_stop_handler(self):
+        """緊急停止處理器 - 防誤觸雙擊設計"""
+        if not self.emergency_stop_armed:
+            # 第一次點擊：警告狀態
+            self.emergency_stop_armed = True
+            self.emergency_stop_btn.setText("⚠️ 再次點擊確認")
+            self.emergency_stop_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #f39c12;
+                    color: white;
+                    border: 2px solid #e67e22;
+                    border-radius: 6px;
+                    font-weight: bold;
+                    font-size: 11px;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #e67e22;
+                    border-color: #d35400;
+                }
+            """)
+            self.emergency_stop_btn.setToolTip("點擊確認執行緊急停止")
+            
+            # 3秒後自動重置
+            self.emergency_timer.start(3000)
+        else:
+            # 第二次點擊：執行緊急停止
+            self.emergency_timer.stop()
+            self.reset_emergency_button()
+            self.emergency_stop()
+            
+    def reset_emergency_button(self):
+        """重置緊急停止按鈕狀態"""
+        self.emergency_stop_armed = False
+        self.emergency_stop_btn.setText("🛑 緊急停止")
+        self.emergency_stop_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: 2px solid #c0392b;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 12px;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+                border-color: #a93226;
+            }
+        """)
+        self.emergency_stop_btn.setToolTip("雙擊執行緊急停止，防止誤觸")
 
 
 
