@@ -1991,7 +1991,7 @@ class ProfessionalKeithleyWidget(QWidget):
         self.data_table.setItem(row_count, 0, QTableWidgetItem(timestamp))       # 時間移至第一欄
         self.data_table.setItem(row_count, 1, QTableWidgetItem(f"{voltage:.6f}"))   # 電壓
         self.data_table.setItem(row_count, 2, QTableWidgetItem(f"{current:.6f}"))   # 電流
-        self.data_table.setItem(row_count, 3, QTableWidgetItem(f"{resistance:.2f}")) # 電阻
+        self.data_table.setItem(row_count, 3, QTableWidgetItem(f"{resistance:.3f}")) # 電阻 - 提高精度至3位小數
         self.data_table.setItem(row_count, 4, QTableWidgetItem(f"{power:.6f}"))     # 功率
         
         # 自動滾動

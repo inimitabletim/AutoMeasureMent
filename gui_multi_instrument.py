@@ -88,15 +88,18 @@ class InstrumentStatusWidget(QFrame):
         """安全斷開所有儀器連接"""
         # 檢查是否有儀器正在輸出
         active_outputs = []
-        parent = self.parent()
         
-        if parent and hasattr(parent, 'keithley_widget'):
-            kw = parent.keithley_widget
-            if hasattr(kw, 'output_enabled') and kw.output_enabled:
+        # 使用正確的主視窗引用
+        if hasattr(self, 'main_window') and self.main_window:
+            main_window = self.main_window
+            
+            # 檢查Keithley是否正在測量
+            kw = main_window.keithley_widget
+            if hasattr(kw, 'is_measuring') and kw.is_measuring:
                 active_outputs.append("Keithley 2461")
                 
-        if parent and hasattr(parent, 'rigol_widget'):
-            rw = parent.rigol_widget
+            # 檢查Rigol是否正在輸出
+            rw = main_window.rigol_widget  
             if hasattr(rw, 'output_enabled') and getattr(rw, 'output_enabled', False):
                 active_outputs.append("Rigol DP711")
         
@@ -121,11 +124,17 @@ class InstrumentStatusWidget(QFrame):
             self.update_dp711_status(False)
             
             # 通知各個 widget 斷開連接
-            if parent:
-                if hasattr(parent, 'keithley_widget'):
-                    parent.keithley_widget.disconnect_device()
-                if hasattr(parent, 'rigol_widget'):
-                    parent.rigol_widget.disconnect_device()
+            if hasattr(self, 'main_window') and self.main_window:
+                main_window = self.main_window
+                
+                # 停止Keithley測量並斷開
+                if hasattr(main_window, 'keithley_widget'):
+                    main_window.keithley_widget.stop_measurement()
+                    main_window.keithley_widget.disconnect_device()
+                    
+                # 停止Rigol輸出並斷開
+                if hasattr(main_window, 'rigol_widget'):
+                    main_window.rigol_widget.disconnect_device()
             
             # 顯示操作完成提示
             if active_outputs:
@@ -146,13 +155,26 @@ class InstrumentStatusWidget(QFrame):
         
         if reply == QMessageBox.StandardButton.Yes:
             # 緊急關閉所有輸出
-            for name, instrument in self.instrument_manager.instruments.items():
+            if hasattr(self, 'main_window') and self.main_window:
+                main_window = self.main_window
+                
                 try:
-                    if hasattr(instrument, 'output_off'):
-                        instrument.output_off()
-                except:
-                    pass
-            
+                    # 緊急停止Keithley
+                    if hasattr(main_window, 'keithley_widget'):
+                        kw = main_window.keithley_widget
+                        kw.stop_measurement()  # 停止測量
+                        if kw.keithley and kw.keithley.connected:
+                            kw.keithley.output_off()  # 關閉輸出
+                            
+                    # 緊急停止Rigol
+                    if hasattr(main_window, 'rigol_widget'):
+                        rw = main_window.rigol_widget
+                        if rw.dp711 and hasattr(rw.dp711, 'output_off'):
+                            rw.dp711.output_off()
+                            
+                except Exception as e:
+                    print(f"緊急停止錯誤: {e}")
+                    
             QMessageBox.information(self, "緊急停止", "所有儀器輸出已緊急關閉！")
 
 
@@ -272,11 +294,16 @@ class MultiInstrumentGUI(QMainWindow):
         
         # 儀器狀態欄
         self.status_widget = InstrumentStatusWidget()
+        # 將主視窗的參考傳給狀態欄
+        self.status_widget.main_window = self
         main_layout.addWidget(self.status_widget)
         
         # 連接信號
         self.keithley_widget.connection_changed.connect(self.status_widget.update_keithley_status)
         self.rigol_widget.connection_changed.connect(self.status_widget.update_dp711_status)
+        
+        # 將主視窗的參考傳給狀態欄，讓按鈕能正確訪問widgets
+        self.status_widget.main_window = self
         
         # 應用主題
         self.apply_theme()
