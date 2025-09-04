@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                             QComboBox, QDoubleSpinBox, QCheckBox, QTextEdit,
                             QMessageBox, QProgressBar, QSplitter, QTabWidget,
                             QTableWidget, QTableWidgetItem, QHeaderView,
-                            QFrame, QLCDNumber, QSizePolicy)
+                            QFrame, QLCDNumber, QSizePolicy, QScrollArea,
+                            QSpacerItem)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
 import pyqtgraph as pg
@@ -199,11 +200,23 @@ class ProfessionalKeithleyWidget(QWidget):
         main_splitter.setSizes([300, 700])
         
     def create_control_panel(self):
-        """創建左側控制面板"""
+        """創建左側控制面板 - 添加滾動支持解決GroupBox遮擋問題"""
+        # 主控制面板容器
         control_widget = QWidget()
         control_widget.setMaximumWidth(350)
         control_widget.setMinimumWidth(300)
-        layout = QVBoxLayout(control_widget)
+        
+        # 創建滾動區域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)  # 移除邊框使外觀更整潔
+        
+        # 滾動內容容器
+        scroll_content = QWidget()
+        layout = QVBoxLayout(scroll_content)
+        layout.setContentsMargins(5, 5, 5, 5)  # 添加適當的邊距
         
         # ===== 設備連接 =====
         connection_group = self.create_connection_group()
@@ -234,14 +247,24 @@ class ProfessionalKeithleyWidget(QWidget):
         # 初始化源參數區域
         self.update_source_parameters()
         
-        # 添加彈性空間
-        layout.addStretch()
+        # 使用固定大小的spacer替代addStretch避免推擠效應
+        spacer = QSpacerItem(20, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        layout.addItem(spacer)
+        
+        # 將內容設定給滾動區域
+        scroll_area.setWidget(scroll_content)
+        
+        # 主佈局包含滾動區域
+        main_layout = QVBoxLayout(control_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)  # 移除外部邊距
+        main_layout.addWidget(scroll_area)
         
         return control_widget
         
     def create_connection_group(self):
         """創建增強的設備連接群組 - 支援非阻塞式連線 [v2.0]"""
         group = QGroupBox("🔌 設備連接")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
         # IP地址輸入
@@ -280,6 +303,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_measurement_mode_group(self):
         """創建測量模式群組"""
         group = QGroupBox("📊 測量模式")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
         # 測量模式 - 漸進式設計：暫時固定為連續監控
@@ -307,6 +331,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_sweep_settings_group(self):
         """創建掃描設定群組"""
         group = QGroupBox("🔄 掃描設定")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
         layout.addWidget(QLabel("起始值:"), 0, 0)
@@ -338,6 +363,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_operation_control_group(self):
         """創建操作控制群組"""
         group = QGroupBox("⚡ 操作控制")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QVBoxLayout(group)
         
         # 主控制按鈕
@@ -435,6 +461,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_data_management_group(self):
         """創建數據管理群組"""
         group = QGroupBox("💾 數據管理")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QVBoxLayout(group)
         
         button_layout = QHBoxLayout()
@@ -477,6 +504,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_voltage_source_params(self):
         """創建電壓源參數 - 簡化版本"""
         group = QGroupBox("🔋 電源設置")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
         # 基本電壓設置
@@ -501,6 +529,7 @@ class ProfessionalKeithleyWidget(QWidget):
     def create_current_source_params(self):
         """創建電流源參數 - 簡化版本"""
         group = QGroupBox("⚡ 電流源設置")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
         # 基本電流設置
