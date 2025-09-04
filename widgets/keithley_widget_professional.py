@@ -824,7 +824,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 mean = stats.get('mean', 0)
                 max_val = stats.get('max', 0)
                 min_val = stats.get('min', 0)
-                self.stats_voltage_label.setText(f"統計電壓: {mean:.3f}V (↑{max_val:.3f} ↓{min_val:.3f})")
+                self.stats_voltage_label.setText(f"統計電壓: {mean:.5f}V (↑{max_val:.5f} ↓{min_val:.5f})")
             else:
                 self.stats_voltage_label.setText("統計電壓: --V")
             
@@ -834,7 +834,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 mean = stats.get('mean', 0)
                 max_val = stats.get('max', 0)
                 min_val = stats.get('min', 0)
-                self.stats_current_label.setText(f"統計電流: {mean:.3f}A (↑{max_val:.3f} ↓{min_val:.3f})")
+                self.stats_current_label.setText(f"統計電流: {mean:.6f}A (↑{max_val:.6f} ↓{min_val:.6f})")
             else:
                 self.stats_current_label.setText("統計電流: --A")
                 
@@ -852,7 +852,7 @@ class ProfessionalKeithleyWidget(QWidget):
                 max_power = max(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
                 min_power = min(abs(v_max * i_max), abs(v_min * i_min), abs(v_max * i_min), abs(v_min * i_max))
                 
-                self.stats_power_label.setText(f"統計功率: {avg_power:.3f}W (↑{max_power:.3f} ↓{min_power:.3f})")
+                self.stats_power_label.setText(f"統計功率: {avg_power:.6f}W (↑{max_power:.6f} ↓{min_power:.6f})")
             else:
                 self.stats_power_label.setText("統計功率: --W")
                 
