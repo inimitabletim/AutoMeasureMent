@@ -77,6 +77,7 @@ class RigolControlWidget(QWidget):
         
         # 連接管理 - 使用統一Worker系統，不再需要ConnectionStateManager
         self.connection_worker = None  # 當前的連接工作線程
+        self.is_connecting = False  # 連接狀態標記
         
         # 其他屬性
         self.data_logger = None
@@ -1278,12 +1279,12 @@ class RigolControlWidget(QWidget):
             return
         
         # 檢查是否正在連接中
-        if self.connection_manager.is_connecting:
+        if self.is_connecting:
             QMessageBox.warning(self, "警告", "正在連接中，請稍後...")
             return
         
         # 設置連接狀態
-        self.connection_manager.is_connecting = True
+        self.is_connecting = True
         
         # 禁用連接按鈕，顯示連接狀態
         self.connect_btn.setEnabled(False)
@@ -1377,7 +1378,7 @@ class RigolControlWidget(QWidget):
         self.connect_btn.setText("連接設備")
         
         # 重置連接狀態
-        self.connection_manager.is_connecting = False
+        self.is_connecting = False
         
         # 清理工作線程引用
         if self.connection_worker:
