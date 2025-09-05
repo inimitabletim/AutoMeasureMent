@@ -20,7 +20,7 @@ from src.theme_manager import ThemeManager, ThemeStyleSheet
 from src.instrument_base import InstrumentManager
 # 使用Professional版本Widget
 from widgets.keithley_widget_professional import ProfessionalKeithleyWidget
-from widgets.rigol_widget import RigolControlWidget
+from widgets.rigol_widget import ProfessionalRigolWidget
 
 
 class InstrumentStatusWidget(QFrame):
@@ -380,8 +380,8 @@ class MultiInstrumentGUI(QMainWindow):
         self.keithley_widget = ProfessionalKeithleyWidget()
         self.keithley_widget.set_theme(self.current_theme)
         
-        self.rigol_widget = RigolControlWidget()
-        self.rigol_widget.set_theme(self.current_theme)
+        self.rigol_widget = ProfessionalRigolWidget()
+        # 新架構不需要手動設置主題，會自動檢測
         
         self.management_widget = InstrumentManagementWidget()
         self.data_center_widget = DataCenterWidget()
