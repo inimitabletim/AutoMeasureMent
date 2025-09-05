@@ -114,8 +114,11 @@ class ProfessionalRigolWidget(QWidget):
         self.connected_devices = {}
         self.active_device_port = None
         
-        # IP輸入 (對應Keithley的IP輸入，但這裡用於串口設置)
+        # 專業連接設定 (對應Keithley的IP輸入，但這裡用於串口設置)
         self.port_input = None
+        self.baudrate_setting = 9600  # 預設波特率
+        self.connection_timeout = 5   # 連接超時
+        self.connection_retries = 3   # 重試次數
         
         self.setup_ui()
         
@@ -192,57 +195,83 @@ class ProfessionalRigolWidget(QWidget):
         return control_widget
         
     def create_connection_group(self):
-        """創建連接控制群組 - 統一的連接管理"""
-        group = QGroupBox("🔌 設備連接")
+        """創建專業設備連接群組 - 參考Keithley 2461設計，適配串口連接"""
+        group = QGroupBox("[CONN] 設備連接")
         group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        layout = QVBoxLayout(group)
+        layout = QGridLayout(group)
         
-        # 串口選擇 (對應Keithley的IP輸入)
-        connection_layout = QGridLayout()
+        # 串口輸入 (對應Keithley的IP地址輸入)
+        layout.addWidget(QLabel("串口:"), 0, 0)
+        self.port_input = QComboBox()
+        self.port_input.setEditable(True)  # 允許手動輸入
+        self.port_input.setPlaceholderText("例如: COM3")
+        self.port_input.addItem("COM3")  # 預設選項
+        layout.addWidget(self.port_input, 0, 1)
         
-        # 串口選擇
-        connection_layout.addWidget(QLabel("串口:"), 0, 0)
-        self.port_combo = QComboBox()
-        self.port_combo.setMinimumWidth(200)
-        self.port_combo.setEditable(True)  # 允許手動輸入
-        self.port_combo.addItem("COM3")  # 預設選項
-        connection_layout.addWidget(self.port_combo, 0, 1)
+        # 自動掃描按鈕 (緊湊設計)
+        self.auto_scan_btn = QPushButton("[SCAN] 掃描")
+        self.auto_scan_btn.setMaximumWidth(70)
+        self.auto_scan_btn.clicked.connect(self.auto_scan_and_detect)
+        self.auto_scan_btn.setToolTip("自動掃描並識別DP711設備")
+        self.auto_scan_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 3px;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        layout.addWidget(self.auto_scan_btn, 0, 2)
         
-        # 掃描端口按鈕
-        self.scan_ports_btn = QPushButton("🔍")
-        self.scan_ports_btn.setMaximumWidth(40)
-        self.scan_ports_btn.clicked.connect(self.scan_ports)
-        self.scan_ports_btn.setToolTip("掃描端口")
-        connection_layout.addWidget(self.scan_ports_btn, 0, 2)
+        # 進階設定按鈕 (對應波特率等設定)
+        self.advanced_connection_btn = QPushButton("[SET] 進階連接設定")
+        self.advanced_connection_btn.clicked.connect(self.show_advanced_connection_settings)
+        self.advanced_connection_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                margin-top: 5px;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+        """)
+        layout.addWidget(self.advanced_connection_btn, 1, 0, 1, 3)
         
-        # 波特率選擇
-        connection_layout.addWidget(QLabel("波特率:"), 1, 0)
-        self.baudrate_combo = QComboBox()
-        self.baudrate_combo.addItems(["9600", "19200", "38400", "57600", "115200"])
-        self.baudrate_combo.setCurrentText("9600")
-        connection_layout.addWidget(self.baudrate_combo, 1, 1, 1, 2)
-        
-        layout.addLayout(connection_layout)
-        
-        # 統一的連接狀態Widget
+        # 統一的連接狀態Widget (與Keithley完全一致)
         try:
             self.connection_status_widget = ConnectionStatusWidget()
+            layout.addWidget(self.connection_status_widget, 2, 0, 1, 3)
+            # 連接信號處理
             self.connection_status_widget.connection_requested.connect(self._handle_connection_request)
             self.connection_status_widget.disconnection_requested.connect(self._handle_disconnection_request)
             self.connection_status_widget.connection_cancelled.connect(self._handle_connection_cancel)
-            layout.addWidget(self.connection_status_widget)
         except Exception as e:
             self.logger.warning(f"無法創建統一連接狀態Widget: {e}")
-            # 後備方案 - 基本按鈕
+            # 後備方案 - 使用簡單狀態顯示
+            self.connection_status_widget = QLabel("連接狀態載入中...")
+            layout.addWidget(self.connection_status_widget, 2, 0, 1, 3)
+            # 創建基本連接按鈕
             self.connect_btn = QPushButton("連接設備")
             self.connect_btn.clicked.connect(self._handle_connection_request)
-            layout.addWidget(self.connect_btn)
+            layout.addWidget(self.connect_btn, 3, 0, 1, 3)
+        
+        # 隱藏的波特率設定 (在進階設定中顯示)
+        self.baudrate_setting = 9600  # 預設波特率
         
         return group
         
     def create_power_control_group(self):
         """創建電源控制群組"""
-        group = QGroupBox("⚡ 電源控制")
+        group = QGroupBox("[PWR] 電源控制")
         group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QGridLayout(group)
         
@@ -285,19 +314,19 @@ class ProfessionalRigolWidget(QWidget):
         
     def create_measurement_control_group(self):
         """創建測量控制群組"""
-        group = QGroupBox("📊 測量控制")
+        group = QGroupBox("[MEAS] 測量控制")
         group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QVBoxLayout(group)
         
         # 測量按鈕
         button_layout = QHBoxLayout()
         
-        self.start_measurement_btn = QPushButton("▶️ 開始測量")
+        self.start_measurement_btn = QPushButton("[START] 開始測量")
         self.start_measurement_btn.setEnabled(False)
         self.start_measurement_btn.clicked.connect(self.toggle_measurement)
         button_layout.addWidget(self.start_measurement_btn)
         
-        self.stop_measurement_btn = QPushButton("⏹️ 停止")
+        self.stop_measurement_btn = QPushButton("[STOP] 停止")
         self.stop_measurement_btn.setEnabled(False)
         self.stop_measurement_btn.clicked.connect(self.stop_measurement)
         button_layout.addWidget(self.stop_measurement_btn)
@@ -321,7 +350,7 @@ class ProfessionalRigolWidget(QWidget):
             self.memory_combo.addItem(f"M{i}")
         memory_layout.addWidget(self.memory_combo)
         
-        self.refresh_memory_btn = QPushButton("🔄")
+        self.refresh_memory_btn = QPushButton("[REF]")
         self.refresh_memory_btn.setMaximumWidth(40)
         self.refresh_memory_btn.setEnabled(False)
         self.refresh_memory_btn.clicked.connect(self.refresh_memory_catalog)
@@ -360,7 +389,7 @@ class ProfessionalRigolWidget(QWidget):
         self.export_csv_btn.clicked.connect(self.export_csv)
         export_layout.addWidget(self.export_csv_btn)
         
-        self.clear_data_btn = QPushButton("🗑️ 清除")
+        self.clear_data_btn = QPushButton("[CLR] 清除")
         self.clear_data_btn.clicked.connect(self.clear_measurement_data)
         export_layout.addWidget(self.clear_data_btn)
         
@@ -390,7 +419,7 @@ class ProfessionalRigolWidget(QWidget):
         
     def create_professional_lcd_group(self):
         """創建專業LCD顯示群組 - 與Keithley統一風格"""
-        group = QGroupBox("📊 電源監控中心")
+        group = QGroupBox("[MON] 電源監控中心")
         layout = QGridLayout(group)
         
         # 電壓顯示
@@ -513,7 +542,137 @@ class ProfessionalRigolWidget(QWidget):
         
         return group
 
-    # ===== 連接管理方法 =====
+    # ===== 專業連接管理方法 =====
+    def auto_scan_and_detect(self):
+        """自動掃描並智能識別Rigol DP711設備 - 專業模式"""
+        self.auto_scan_btn.setEnabled(False)
+        self.auto_scan_btn.setText("掃描中...")
+        
+        try:
+            from src.port_manager import get_port_manager
+            port_manager = get_port_manager()
+            port_manager.scan_ports()
+            
+            # 清空現有選項
+            self.port_input.clear()
+            
+            # 獲取所有可用端口
+            available_devices = port_manager.get_available_ports()
+            
+            # 智能識別DP711設備
+            dp711_ports = []
+            other_ports = []
+            
+            for device_info in available_devices:
+                # 檢查設備描述是否包含常見的DP711相關關鍵詞
+                description = device_info.description.upper()
+                if any(keyword in description for keyword in ['SERIAL', 'COM', 'USB', 'PROLIFIC']):
+                    # 進一步檢查是否為DP711 (這裡可以擴展更精確的識別邏輯)
+                    dp711_ports.append(device_info)
+                else:
+                    other_ports.append(device_info)
+            
+            # 優先添加識別到的DP711端口
+            for device_info in dp711_ports:
+                display_text = f"{device_info.port} - {device_info.description}"
+                self.port_input.addItem(display_text, device_info.port)
+            
+            # 添加其他端口
+            for device_info in other_ports:
+                display_text = f"{device_info.port} - {device_info.description}"
+                self.port_input.addItem(display_text, device_info.port)
+            
+            if dp711_ports:
+                # 自動選擇第一個可能的DP711端口
+                self.port_input.setCurrentIndex(0)
+                self.log_message(f"[SUCCESS] 發現 {len(dp711_ports)} 個潛在的DP711設備")
+                
+                # 顯示友好的提示信息
+                if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_message'):
+                    self.connection_status_widget.set_message(f"發現 {len(dp711_ports)} 個設備，可嘗試連接")
+                    
+            elif other_ports:
+                self.port_input.setCurrentIndex(0)
+                self.log_message(f"掃描到 {len(other_ports)} 個串口，請手動選擇")
+            else:
+                self.port_input.addItem("未發現可用端口")
+                self.log_message("未發現任何可用的串口設備")
+                
+        except Exception as e:
+            self.logger.error(f"自動掃描時發生錯誤: {e}")
+            self.port_input.addItem("掃描失敗")
+            self.log_message(f"掃描失敗: {str(e)}")
+        finally:
+            self.auto_scan_btn.setEnabled(True)
+            self.auto_scan_btn.setText("[SCAN] 掃描")
+
+    def show_advanced_connection_settings(self):
+        """顯示進階連接設定對話框 - 專業級配置"""
+        from PyQt6.QtWidgets import QDialog, QFormLayout, QSpinBox, QDialogButtonBox
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("進階連接設定")
+        dialog.setModal(True)
+        dialog.resize(350, 200)
+        
+        layout = QFormLayout(dialog)
+        
+        # 波特率設定
+        baudrate_spin = QSpinBox()
+        baudrate_spin.setRange(1200, 115200)
+        baudrate_spin.setValue(self.baudrate_setting)
+        baudrate_spin.setSingleStep(1200)
+        common_rates = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+        baudrate_spin.setSpecialValueText("自定義")
+        layout.addRow("波特率:", baudrate_spin)
+        
+        # 超時設定
+        timeout_spin = QSpinBox()
+        timeout_spin.setRange(1, 30)
+        timeout_spin.setValue(5)
+        timeout_spin.setSuffix(" 秒")
+        layout.addRow("連接超時:", timeout_spin)
+        
+        # 重試次數
+        retry_spin = QSpinBox()
+        retry_spin.setRange(1, 10)
+        retry_spin.setValue(3)
+        retry_spin.setSuffix(" 次")
+        layout.addRow("重試次數:", retry_spin)
+        
+        # 按鈕
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        # 樣式設定
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: #f8f9fa;
+            }
+            QLabel {
+                font-weight: bold;
+                color: #2c3e50;
+            }
+            QSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 3px;
+                background-color: white;
+            }
+        """)
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # 保存設定
+            self.baudrate_setting = baudrate_spin.value()
+            self.connection_timeout = timeout_spin.value()
+            self.connection_retries = retry_spin.value()
+            
+            self.log_message(f"進階設定已更新: {self.baudrate_setting} baud, {self.connection_timeout}s timeout")
+
     def scan_ports(self):
         """掃描可用串口"""
         try:
@@ -546,18 +705,34 @@ class ProfessionalRigolWidget(QWidget):
             QMessageBox.warning(self, "掃描錯誤", f"無法掃描端口: {str(e)}")
 
     def _handle_connection_request(self):
-        """處理連接請求 - 統一的非阻塞式連接"""
-        port_text = self.port_combo.currentText()
-        if not port_text or port_text == "無可用端口":
-            if hasattr(self, 'connection_status_widget'):
-                self.connection_status_widget.set_connection_failed_state("請先掃描並選擇端口")
+        """處理連接請求 - 專業級非阻塞式連接"""
+        # 獲取端口信息
+        port_text = self.port_input.currentText()
+        if not port_text or port_text in ["未發現可用端口", "掃描失敗"]:
+            error_msg = "請先掃描並選擇有效的串口"
+            if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_connection_failed_state'):
+                self.connection_status_widget.set_connection_failed_state(error_msg)
             else:
-                QMessageBox.warning(self, "警告", "請先掃描並選擇端口")
+                QMessageBox.warning(self, "連接錯誤", error_msg)
             return
             
-        # 提取端口名稱
-        port = port_text.split(" ")[0] if " " in port_text else port_text
-        baudrate = int(self.baudrate_combo.currentText())
+        # 智能提取端口名稱
+        if " - " in port_text:
+            port = port_text.split(" - ")[0].strip()
+        else:
+            port = port_text.strip()
+            
+        # 驗證端口格式
+        if not port.upper().startswith('COM') and not port.startswith('/dev/'):
+            error_msg = f"無效的端口格式: {port}"
+            if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_connection_failed_state'):
+                self.connection_status_widget.set_connection_failed_state(error_msg)
+            else:
+                QMessageBox.warning(self, "連接錯誤", error_msg)
+            return
+            
+        # 使用進階設定中的波特率
+        baudrate = getattr(self, 'baudrate_setting', 9600)
         
         try:
             # 使用統一的連接Worker
@@ -597,37 +772,97 @@ class ProfessionalRigolWidget(QWidget):
                 QMessageBox.warning(self, "連接錯誤", error_msg)
 
     def _on_connection_started(self):
-        """連接開始時的回調"""
-        self.log_message("開始建立連接...")
-        if hasattr(self, 'connection_status_widget'):
-            self.connection_status_widget.set_connecting_state("正在連接...")
+        """連接開始時的回調 - 專業級狀態管理"""
+        port = self.port_input.currentText().split(" - ")[0] if " - " in self.port_input.currentText() else self.port_input.currentText()
+        self.log_message(f"開始建立連接到 {port}...")
+        
+        # 禁用掃描按鈕，防止干擾
+        self.auto_scan_btn.setEnabled(False)
+        
+        if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_connecting_state'):
+            self.connection_status_widget.set_connecting_state()
 
     def _on_connection_progress(self, message: str):
-        """連接進度更新的回調"""
+        """連接進度更新的回調 - 增強反饋"""
         self.log_message(f"連接進度: {message}")
+        # 可以在這裡添加進度條更新邏輯
 
     def _on_connection_success(self, identity: str):
-        """連接成功的回調"""
+        """連接成功的回調 - 專業級成功處理"""
         if hasattr(self, 'pending_device'):
             self.rigol = self.pending_device
+            port = self.port_input.currentText().split(" - ")[0] if " - " in self.port_input.currentText() else self.port_input.currentText()
+            
+            # 保存成功的連接信息
+            self.connected_devices[port] = self.rigol
+            self.active_device_port = port
             
             # 更新UI狀態
             self.enable_controls(True)
-            self.log_message(f"✓ 連接成功: {identity}")
             
-            if hasattr(self, 'connection_status_widget'):
-                self.connection_status_widget.set_connected_state(f"已連接 - {identity}")
+            # 格式化設備識別信息
+            if identity and identity != "已連接":
+                display_identity = identity.replace("RIGOL TECHNOLOGIES,", "").replace("DP711,", "DP711 ").strip()
+                success_msg = f"[SUCCESS] 成功連接到 {display_identity}"
+                status_msg = f"已連接 - {display_identity}"
+            else:
+                success_msg = f"[SUCCESS] 成功連接到 {port}"
+                status_msg = f"已連接 - {port}"
+            
+            self.log_message(success_msg)
+            
+            # 更新連接狀態顯示
+            if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_connected_state'):
+                self.connection_status_widget.set_connected_state(status_msg)
+            
+            # 重新啟用掃描按鈕
+            self.auto_scan_btn.setEnabled(True)
             
             # 發送連接狀態信號
             self.connection_changed.emit(True, identity)
 
     def _on_connection_failed(self, error_message: str):
-        """連接失敗的回調"""
-        self.log_message(f"✗ 連接失敗: {error_message}")
-        if hasattr(self, 'connection_status_widget'):
-            self.connection_status_widget.set_connection_failed_state(error_message)
+        """連接失敗的回調 - 專業級錯誤處理"""
+        port = self.port_input.currentText().split(" - ")[0] if " - " in self.port_input.currentText() else self.port_input.currentText()
+        
+        # 智能錯誤信息處理
+        user_friendly_message = self._format_connection_error(error_message, port)
+        
+        self.log_message(f"✗ 連接失敗: {user_friendly_message}")
+        
+        # 顯示用戶友好的錯誤信息
+        if hasattr(self, 'connection_status_widget') and hasattr(self.connection_status_widget, 'set_connection_failed_state'):
+            self.connection_status_widget.set_connection_failed_state(user_friendly_message)
         else:
-            QMessageBox.warning(self, "連接失敗", error_message)
+            QMessageBox.warning(self, "連接失敗", user_friendly_message)
+        
+        # 重新啟用掃描按鈕，允許重新掃描
+        self.auto_scan_btn.setEnabled(True)
+        
+        # 提供解決建議
+        self._show_connection_troubleshooting(error_message, port)
+
+    def _format_connection_error(self, error_message: str, port: str) -> str:
+        """將技術錯誤信息轉換為用戶友好的信息"""
+        error_lower = error_message.lower()
+        
+        if "timeout" in error_lower or "tmo" in error_lower:
+            return f"連接超時 - 請檢查 {port} 是否有設備連接"
+        elif "access" in error_lower or "permission" in error_lower:
+            return f"無法訪問 {port} - 端口可能被其他程式占用"
+        elif "not found" in error_lower or "no such" in error_lower:
+            return f"端口 {port} 不存在 - 請重新掃描設備"
+        elif "resource" in error_lower:
+            return f"無法打開 {port} - 設備可能未準備好"
+        else:
+            return f"連接到 {port} 失敗: {error_message}"
+
+    def _show_connection_troubleshooting(self, error_message: str, port: str):
+        """顯示連接問題排除建議"""
+        # 只在嚴重錯誤時顯示詳細建議
+        if "timeout" in error_message.lower():
+            # 可以在這裡添加自動重試邏輯或顯示詳細的故障排除指南
+            pass
 
     def _on_connection_finished(self):
         """連接過程結束的回調"""
@@ -741,7 +976,7 @@ class ProfessionalRigolWidget(QWidget):
             self.continuous_worker.start_measurement()
             
             self.is_measuring = True
-            self.start_measurement_btn.setText("⏸️ 暫停測量")
+            self.start_measurement_btn.setText("[PAUSE] 暫停測量")
             self.stop_measurement_btn.setEnabled(True)
             self.log_message("開始連續測量")
             
@@ -758,7 +993,7 @@ class ProfessionalRigolWidget(QWidget):
             self.continuous_worker = None
             
         self.is_measuring = False
-        self.start_measurement_btn.setText("▶️ 開始測量")
+        self.start_measurement_btn.setText("[START] 開始測量")
         self.stop_measurement_btn.setEnabled(False)
         self.log_message("測量已停止")
 

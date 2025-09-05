@@ -113,7 +113,7 @@ class ConnectionStatusWidget(QFrame):
         
     def set_disconnected_state(self):
         """設置為未連接狀態"""
-        self.status_indicator.setText("🔴")
+        self.status_indicator.setText("[DISC]")
         self.status_text.setText("未連接")
         self.status_text.setStyleSheet("color: #e74c3c;")
         
@@ -130,7 +130,7 @@ class ConnectionStatusWidget(QFrame):
         
     def set_connecting_state(self):
         """設置為連線中狀態"""
-        self.status_indicator.setText("🟡")
+        self.status_indicator.setText("[CONN]")
         self.status_text.setText("連線中...")
         self.status_text.setStyleSheet("color: #f39c12;")
         
@@ -147,7 +147,7 @@ class ConnectionStatusWidget(QFrame):
         
     def set_connected_state(self, device_info: str = ""):
         """設置為已連接狀態"""
-        self.status_indicator.setText("🟢")
+        self.status_indicator.setText("[OK]")
         status_text = "已連接"
         if device_info:
             status_text += f" - {device_info}"
@@ -167,7 +167,7 @@ class ConnectionStatusWidget(QFrame):
         
     def set_connection_failed_state(self, error_message: str = ""):
         """設置為連線失敗狀態"""
-        self.status_indicator.setText("❌")
+        self.status_indicator.setText("[ERR]")
         self.status_text.setText("連線失敗")
         self.status_text.setStyleSheet("color: #e74c3c;")
         

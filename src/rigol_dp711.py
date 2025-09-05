@@ -77,6 +77,8 @@ class RigolDP711(PowerSupplyBase):
                 identity = self.instrument.query("*IDN?").strip()
                 if "DP711" in identity or "RIGOL" in identity.upper():
                     self.connected = True
+                    # 緩存設備身份信息
+                    self._cached_identity = identity
                     self.logger.info(f"成功連接到設備: {identity}")
                     
                     # 初始化設備
@@ -154,11 +156,12 @@ class RigolDP711(PowerSupplyBase):
             self.logger.error(f"發送指令失敗: {command} - {e}")
             raise
             
-    def _query_command(self, command: str) -> str:
-        """查詢 SCPI 指令
+    def _query_command(self, command: str, retries: int = 2) -> str:
+        """查詢 SCPI 指令 - 帶重試機制
         
         Args:
             command: SCPI 查詢指令
+            retries: 重試次數（默認2次）
             
         Returns:
             str: 設備回應
@@ -166,14 +169,34 @@ class RigolDP711(PowerSupplyBase):
         if not self.connected or not self.instrument:
             raise RuntimeError("設備未連接")
             
-        try:
-            response = self.instrument.query(command).strip()
-            self.logger.debug(f"查詢指令: {command} -> {response}")
-            return response
-            
-        except Exception as e:
-            self.logger.error(f"查詢指令失敗: {command} - {e}")
-            raise
+        import time
+        last_error = None
+        
+        for attempt in range(retries + 1):
+            try:
+                # 清空輸入緩衝區，避免殘留數據干擾
+                if attempt > 0:
+                    try:
+                        self.instrument.read_bytes(1024)  # 嘗試清空緩衝區
+                    except:
+                        pass
+                    time.sleep(0.1)  # 短暫延遲
+                
+                response = self.instrument.query(command).strip()
+                self.logger.debug(f"查詢指令: {command} -> {response} (第{attempt + 1}次嘗試)")
+                return response
+                
+            except Exception as e:
+                last_error = e
+                if attempt < retries:
+                    self.logger.debug(f"查詢指令失敗(第{attempt + 1}次嘗試): {command} - {e}，將重試")
+                    time.sleep(0.2)  # 重試前延遲
+                    continue
+                else:
+                    self.logger.error(f"查詢指令失敗(已重試{retries}次): {command} - {e}")
+                    break
+        
+        raise last_error
             
     def reset(self) -> None:
         """重置設備到預設狀態"""
@@ -192,10 +215,19 @@ class RigolDP711(PowerSupplyBase):
         Returns:
             str: 設備識別字串
         """
+        # 如果已經有緩存的身份信息，直接返回
+        if hasattr(self, '_cached_identity') and self._cached_identity:
+            return self._cached_identity
+            
         try:
-            return self._query_command("*IDN?")
-        except:
-            return "Unknown"
+            identity = self._query_command("*IDN?")
+            # 緩存成功獲取的身份信息
+            self._cached_identity = identity
+            return identity
+        except Exception as e:
+            self.logger.warning(f"獲取設備身份失敗: {e}")
+            # 如果有緩存，返回緩存；否則返回預設值
+            return getattr(self, '_cached_identity', "DP711 Unknown")
             
     def is_connected(self) -> bool:
         """檢查設備是否已連接

@@ -46,9 +46,28 @@ class ConnectionWorker(UnifiedWorkerBase):
             if success:
                 self._emit_progress(70)
                 
-                # 獲取設備信息
+                # 獲取設備信息 - 針對不同設備使用不同策略
                 try:
-                    identity = self.instrument.get_identity()
+                    # 檢查是否為 Rigol DP711（串口設備）
+                    from src.rigol_dp711 import RigolDP711
+                    
+                    if isinstance(self.instrument, RigolDP711):
+                        # Rigol DP711: 優先使用緩存避免重複SCPI查詢
+                        import time
+                        time.sleep(0.1)  # 給設備時間完成初始化
+                        
+                        if hasattr(self.instrument, '_cached_identity') and self.instrument._cached_identity:
+                            identity = self.instrument._cached_identity
+                            self.logger.debug(f"Rigol DP711 - 使用緩存身份: {identity}")
+                        else:
+                            # 備選：直接查詢但記錄警告
+                            identity = self.instrument.get_identity()
+                            self.logger.warning(f"Rigol DP711 - 緩存不可用，執行查詢: {identity}")
+                    else:
+                        # Keithley 2461 等網路設備: 標準查詢方式
+                        identity = self.instrument.get_identity()
+                        self.logger.debug(f"網路設備 - 標準身份查詢: {identity}")
+                    
                     self.connection_info = {
                         'identity': identity,
                         'connection_params': self.connection_params,
@@ -58,8 +77,21 @@ class ConnectionWorker(UnifiedWorkerBase):
                     
                 except Exception as e:
                     self.logger.warning(f"無法獲取設備信息: {e}")
+                    
+                    # 針對 Rigol DP711 的錯誤恢復
+                    try:
+                        from src.rigol_dp711 import RigolDP711
+                        if isinstance(self.instrument, RigolDP711):
+                            cached_identity = getattr(self.instrument, '_cached_identity', 'DP711 Unknown')
+                            self.logger.info(f"Rigol DP711 - 使用緩存作為備選: {cached_identity}")
+                            identity = cached_identity
+                        else:
+                            identity = 'Unknown'
+                    except:
+                        identity = 'Unknown'
+                    
                     self.connection_info = {
-                        'identity': 'Unknown',
+                        'identity': identity,
                         'connection_params': self.connection_params,
                         'connected_at': self.get_current_timestamp()
                     }
