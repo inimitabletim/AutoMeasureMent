@@ -40,8 +40,9 @@ class ConnectionWorker(UnifiedWorkerBase):
         try:
             self._emit_progress(10)
             
-            # 嘗試連接
-            success = self.instrument.connect(self.connection_params)
+            # 嘗試連接 - 檢查是否使用最小連接模式
+            minimal_mode = self.connection_params.get('minimal_mode', False)
+            success = self.instrument.connect(self.connection_params, minimal_mode=minimal_mode)
             
             if success:
                 self._emit_progress(70)

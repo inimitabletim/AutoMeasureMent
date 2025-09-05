@@ -35,11 +35,12 @@ class RigolDP711(PowerSupplyBase):
         
         self.logger.info(f"初始化 Rigol DP711 - 端口: {port}")
         
-    def connect(self, connection_params: Optional[Dict[str, Any]] = None) -> bool:
+    def connect(self, connection_params: Optional[Dict[str, Any]] = None, minimal_mode: bool = False) -> bool:
         """連接到 Rigol DP711
         
         Args:
             connection_params: 連接參數 (可覆蓋初始設定)
+            minimal_mode: 最小連接模式 (僅建立連接，跳過初始化)
             
         Returns:
             bool: 連接是否成功
@@ -65,9 +66,9 @@ class RigolDP711(PowerSupplyBase):
             self.instrument.stop_bits = pyvisa.constants.StopBits.one
             self.instrument.flow_control = pyvisa.constants.VI_ASRL_FLOW_NONE
             
-            # 設定讀取終止符
-            self.instrument.read_termination = '\n'
-            self.instrument.write_termination = '\n'
+            # 設定SCPI指令終止符 - Rigol DP711需要CR+LF
+            self.instrument.read_termination = '\n'      # 讀取: 只需要LF
+            self.instrument.write_termination = '\r\n'   # 寫入: 必須CR+LF
             
             # 設定超時時間
             self.instrument.timeout = 5000  # 5 秒
@@ -81,8 +82,13 @@ class RigolDP711(PowerSupplyBase):
                     self._cached_identity = identity
                     self.logger.info(f"成功連接到設備: {identity}")
                     
-                    # 初始化設備
-                    self._initialize_device()
+                    # 根據模式決定是否初始化設備
+                    if not minimal_mode:
+                        self.logger.info("執行設備初始化...")
+                        self._initialize_device()
+                    else:
+                        self.logger.info("最小連接模式 - 跳過設備初始化")
+                    
                     return True
                 else:
                     self.logger.error(f"設備識別失敗: {identity}")
@@ -123,18 +129,17 @@ class RigolDP711(PowerSupplyBase):
             self.logger.error(f"斷開連接時發生錯誤: {e}")
             
     def _initialize_device(self) -> None:
-        """初始化設備設定"""
+        """初始化設備設定 - 移除有問題的 *CLS 指令"""
         try:
-            # 清除錯誤
-            self._send_command("*CLS")
-            time.sleep(0.1)
+            # 注意: 移除 *CLS 指令，因為它會導致 Rigol DP711 顯示遠程指令錯誤
+            # 直接設定設備到安全狀態
             
             # 設定預設狀態
             self.output_off()
             self.set_voltage(0.0)
             self.set_current(1.0)  # 預設電流限制 1A
             
-            self.logger.info("設備初始化完成")
+            self.logger.info("設備初始化完成 (已跳過 *CLS 指令)")
             
         except Exception as e:
             self.logger.error(f"設備初始化失敗: {e}")
